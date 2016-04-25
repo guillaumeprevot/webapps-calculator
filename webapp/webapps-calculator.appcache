@@ -1,0 +1,16 @@
+CACHE MANIFEST
+
+# Version 2016-04-24
+
+CACHE:
+./libs/jquery/jquery.min.js
+./libs/jsep/jsep.min.js
+./webapps-calculator.css
+./webapps-calculator.js
+./webapps-calculator.ico
+./webapps-calculator.png
+
+NETWORK:
+*
+
+FALLBACK:

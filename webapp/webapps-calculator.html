@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html manifest="./webapps-calculator.appcache">
+	<head>
+		<title>Calculator</title>
+		<meta charset="UTF-8">
+		<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+		<meta name="robots" content="noindex, nofollow" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<link rel="stylesheet" type="text/css" href="./webapps-calculator.css" />
+		<link href="./webapps-calculator.ico" rel="shortcut icon" />
+		<link href="./webapps-calculator.ico" rel="icon" type="image/x-icon" />
+		<link href="./webapps-calculator.png" rel="icon" type="image/png" sizes="16x16" />
+	</head>
+	<body>
+
+<div id="calculator-message"></div>
+
+<input id="calculator-content" type="text" value="" placeholder="Calculator"></input>
+
+<div id="calculator-keyboard">
+	<button type="button" class="syntax">(</button>
+	<button type="button" class="syntax">,</button>
+	<button type="button" class="syntax">)</button>
+	<button type="button" class="operator">/</button>
+	<button type="button" class="clear">CE</button>
+
+	<button type="button" class="numeric">7</button>
+	<button type="button" class="numeric">8</button>
+	<button type="button" class="numeric">9</button>
+	<button type="button" class="operator">*</button>
+	<button type="button" class="delete">&larr;</button>
+
+	<button type="button" class="numeric">4</button>
+	<button type="button" class="numeric">5</button>
+	<button type="button" class="numeric">6</button>
+	<button type="button" class="operator">-</button>
+	<button type="button" class="operator">%</button>
+
+	<button type="button" class="numeric">1</button>
+	<button type="button" class="numeric">2</button>
+	<button type="button" class="numeric">3</button>
+	<button type="button" class="operator">+</button>
+	<button type="button" class="sign">+-</button>
+
+	<button type="button" class="help">?</button>
+	<button type="button" class="numeric">0</button>
+	<button type="button" class="decimal">.</button>
+	<button type="button" class="execute">=</button>
+</div>
+
+<div id="calculator-help">
+	<button type="button" class="function">sin</button>
+	<button type="button" class="function">cos</button>
+	<button type="button" class="function">tan</button>
+	<button type="button" class="function">asin</button>
+	<button type="button" class="function">acos</button>
+	<button type="button" class="function">atan</button>
+
+	<button type="button" class="function">abs</button>
+	<button type="button" class="function">min</button>
+	<button type="button" class="function">max</button>
+	<button type="button" class="function">ceil</button>
+	<button type="button" class="function">floor</button>
+	<button type="button" class="function">round</button>
+
+	<button type="button" class="function" data-function="random">rand</button>
+	<button type="button" class="function">exp</button>
+	<button type="button" class="function">log</button>
+	<button type="button" class="function">sqrt</button>
+	<button type="button" class="function">pow</button>
+	<button type="button" class="function">if</button>
+
+	<button type="button" class="numeric">a</button>
+	<button type="button" class="numeric">b</button>
+	<button type="button" class="numeric">c</button>
+	<button type="button" class="numeric">d</button>
+	<button type="button" class="numeric">e</button>
+	<button type="button" class="numeric">f</button>
+
+	<button type="button" class="syntax">[</button>
+	<button type="button" class="syntax">]</button>
+	<button type="button" class="syntax">,</button>
+	<button type="button" class="syntax">&quot;</button>
+	<button type="button" class="syntax">'</button>
+	<button type="button" class="syntax">;</button>
+
+	<button type="button" class="operator">&lt;</button>
+	<button type="button" class="operator">&lt;=</button>
+	<button type="button" class="operator">&gt;</button>
+	<button type="button" class="operator">&gt;=</button>
+	<button type="button" class="operator">&lt;&gt;</button>
+	<button type="button" class="operator">=</button>
+
+	<button type="button" class="operator">&amp;&amp;</button>
+	<button type="button" class="operator">||</button>
+	<button type="button" class="operator">!</button>
+	<button type="button" class="operator">?</button>
+	<button type="button" class="operator">:</button>
+	<button type="button" class="operator">~</button>
+
+	<button type="button" class="operator">&lt;&lt;</button>
+	<button type="button" class="operator">&gt;&gt;</button>
+	<button type="button" class="operator">&gt;&gt;&gt;</button>
+	<button type="button" class="operator">&amp;</button>
+	<button type="button" class="operator">|</button>
+	<button type="button" class="operator">xor</button>
+
+	<button type="button" class="operator" disabled>²</button>
+	<button type="button" class="operator">√</button>
+	<button type="button" class="operator" disabled>!</button>
+	<button type="button" class="operator">^</button>
+	<button type="button" class="syntax" data-content="3.1415926535897932384626433832795">pi</button>
+
+<!--
+saisie des nombres en binaire/octal/décimal/héxadécimal
+saisie des angles en radian/degré/grade
+recherche ?
+-->
+</div>
+
+<div id="calculator-copyright">
+	Développé par <a target="_blank" href="https://github.com/guillaumeprevot">Tech GP</a>
+	grâce à <a target="_blank" href="http://jsep.from.so/">jsep</a> et
+	<a target="_blank" href="http://jquery.com/">jQuery</a>,
+	favicon par <a target="_blank" href="http://dryicons.com">DryIcons</a>.
+</div>
+
+		<script type="text/javascript" src="./libs/jquery/jquery.min.js"></script>
+		<script type="text/javascript" src="./libs/jsep/jsep.min.js"></script>
+		<script type="text/javascript" src="./webapps-calculator.js"></script>
+	</body>
+</html>
