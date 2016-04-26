@@ -83,16 +83,16 @@ Calculator.prototype.eval = function(tree) {
 		case 'Literal':
 			return tree.value;
 		case 'UnaryExpression':
-			operator = this.unaryOperators[tree.operator];
+			operator = this.unaryOperators[tree.operator.toLowerCase()];
 			value = this.eval(tree.argument);
 			return operator.calculate(value);
 		case 'BinaryExpression':
-			operator = this.binaryOperators[tree.operator];
+			operator = this.binaryOperators[tree.operator.toLowerCase()];
 			left = this.eval(tree.left);
 			right = this.eval(tree.right);
 			return operator.calculate(left, right);
 		case 'CallExpression':
-			call = this.functions[tree.callee.name];
+			call = this.functions[tree.callee.name.toLowerCase()];
 			array = tree.arguments.map((function(subtree, index) {
 				return this.eval(subtree);
 			}).bind(this));
@@ -141,6 +141,18 @@ $(function() {
 	var input = document.getElementById('calculator-content'),
 		calculator = new Calculator();
 
+	function calculate() {
+		var val, output;
+		try {
+			val = input.value;
+			output = calculator.eval(val);
+			input.value = output;
+			setMessage(val, false);
+		} catch (e) {
+			setMessage(e.message, true);
+		}
+	}
+
 	function insert(text) {
 		var startIndex = input.selectionStart;
 		var endIndex = input.selectionEnd;
@@ -150,6 +162,11 @@ $(function() {
 		input.focus();
 	}
 
+	function setMessage(text, isError) {
+		$('#calculator-message').text(text || '');
+		$(document.body).toggleClass('error', !!text && isError).toggleClass('success', !!text && !isError);
+	}
+	
 	/* Les boutons qui ajoutent 1 caractère. Pour les opérateurs, on ajoute aussi des espaces autour */
 	$(document.body).on('click', 'button.syntax, button.numeric', function(event) {
 		var button = $(event.target);
@@ -165,18 +182,14 @@ $(function() {
 
 	/* Le bouton qui effectue le calcul */
 	$('#calculator-keyboard .execute').click(function() {
-		var val, output;
-		try {
-			val = input.value;
-			output = calculator.eval(val);
-			input.value = output;
-			$('#calculator-message').text(val);
-			$(document.body).removeClass('error').addClass('success');
-		} catch (e) {
-			$('#calculator-message').text(e.message);
-			$(document.body).addClass('error').removeClass('success');
-		}
+		calculate();
 	});
+	/* Une autre manière de lancer le calcul = appuyer sur "entrée" */
+	$(input).on('keypress', function(event) {
+		if ((event.keyCode || event.which) === 13)
+			calculate();
+	});
+
 
 	/* Le bouton qui ouvre/ferme la partie à droite */
 	$('#calculator-keyboard .help').click(function() {
@@ -186,6 +199,7 @@ $(function() {
 	/* Le bouton qui vide le texte */
 	$('#calculator-keyboard .clear').click(function() {
 		input.value = '';
+		setMessage('', false);
 	});
 
 	/* Le bouton qui retire le dernier caractère */
@@ -231,4 +245,5 @@ $(function() {
 		if ($(document.body).hasClass('success'))
 			input.value = $(event.target).text();
 	});
+
 });
