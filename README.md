@@ -8,8 +8,10 @@ A calculator application with usual mathematical features, extendable function s
 
 Les librairies suivantes ont été utilisées pour cette application :
 
-- [jsep 0.3.0](http://jsep.from.so/) sous licence MIT
+- [jsep 0.3.0](http://jsep.from.so/) sous licence MIT pour analyser les expressions demandées
 - [jQuery 2.2.2](http://jquery.com/) sous licence MIT
+- [ECB](http://www.ecb.europa.eu/stats/exchange/eurofxref/html/index.en.html) pour obtenir des taux de change quotidien
+
 
 L'application est fournie avec un fichier manifest `webapps-calculator.appcache` permettant la mise en cache et l'utilisation en mode déconnecté. Plus d'info chez Mozilla [en français](https://developer.mozilla.org/fr/docs/Utiliser_Application_Cache) ou [en anglais](https://developer.mozilla.org/en-US/docs/Web/HTML/Using_the_application_cache).
 

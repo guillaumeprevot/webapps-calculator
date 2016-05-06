@@ -351,6 +351,15 @@ function Convertor() {
 	this.addUnit('tablespoon', 14786.76478, 'tbs');
 	this.addUnit('teaspoon', 4928.921594, 'tsp');
 
+	this.startCategory('Monétaire');
+	this.addUnit('euro', 1, '€');
+	if (this.moneyRates) {
+		for (var currency in this.moneyRates) {
+			var symbol = (currency === 'USD') ? '$' : (currency === 'GBP') ? '£' : ''; 
+			this.addUnit(currency, 1 / this.moneyRates[currency], symbol);
+		}
+	}
+
 }
 
 Convertor.prototype.convert = function(value, srcUnit, dstUnit) {
@@ -534,6 +543,14 @@ $(function() {
 	$('#calculator-message').click(function(event) {
 		if ($(document.body).hasClass('success'))
 			input.value = $(event.target).text();
+	});
+
+	// Récupérer les taux de change
+	// Taux : http://www.ecb.europa.eu/stats/eurofxref/eurofxref-daily.xml
+	// Noms : http://www.ecb.europa.eu/stats/exchange/eurofxref/html/index.en.html
+	$.get('https://techgp.fr:9001/utils/money/rates', function(data) {
+		// console.log(data)
+		Convertor.prototype.moneyRates = data;
 	});
 
 });
