@@ -1,77 +1,125 @@
+var languages = {
+	'fr': {
+		'in': 'dans',
+		'&&': 'et',
+		'||': 'ou',
+		'sqrt': 'racine',
+		'pow': 'puissance',
+		'if': 'si',
+		'test, trueValue, falseValue': 'test, valeurVrai, valeurFaux'
+	},
+	'en': {
+		'&&': 'and',
+		'||': 'or',
+	}
+};
+
+var language = (typeof languages[navigator.language] !== 'undefined') ? languages[navigator.language] : languages['en'];
+
+function lang(text) {
+	return language[text] || text;
+}
+
 function Calculator() {
-	this.binaryOperators = {};
-	this.createBinaryOperators().forEach((function(value, index, all) {
-		jsep.addBinaryOp(value.name, all.length - index);
-		this.binaryOperators[value.name] = value;
-	}).bind(this));
-	this.unaryOperators = {};
-	this.createUnaryOperators().forEach((function(value, index, all) {
-		jsep.addUnaryOp(value.name);
-		this.unaryOperators[value.name] = value;
-	}).bind(this));
-	this.functions = {};
-	this.createFunctions().forEach((function(value, index, all) {
-		this.functions[value.name] = value;
-	}).bind(this));
+	this.binaryOperators = this.createBinaryOperators();
+	this.unaryOperators = this.createUnaryOperators();
+	this.functions = this.createFunctions();
 };
 
 Calculator.prototype.createBinaryOperators = function() {
-	var operators = [];
-	operators.push({ name: '^', calculate: function(a, b) { return Math.pow(a, b); }});
-	operators.push({ name: '*', calculate: function(a, b) { return a * b; }});
-	operators.push({ name: '/', calculate: function(a, b) { return a / b; }});
-	operators.push({ name: '%', calculate: function(a, b) { return a % b; }});
-	operators.push({ name: '+', calculate: function(a, b) { return a + b; }});
-	operators.push({ name: '-', calculate: function(a, b) { return a - b; }});
-	operators.push({ name: '<<', calculate: function(a, b) { return a << b; }});
-	operators.push({ name: '>>', calculate: function(a, b) { return a >> b; }});
-	operators.push({ name: '>>>', calculate: function(a, b) { return a >>> b; }});
-	operators.push({ name: '<', calculate: function(a, b) { return a < b; }});
-	operators.push({ name: '>', calculate: function(a, b) { return a > b; }});
-	operators.push({ name: '<=', calculate: function(a, b) { return a <= b; }});
-	operators.push({ name: '>=', calculate: function(a, b) { return a >= b; }});
-	operators.push({ name: '===', calculate: function(a, b) { return a === b; }});
-	operators.push({ name: '!==', calculate: function(a, b) { return a !== b; }});
-	operators.push({ name: '=', calculate: function(a, b) { return a == b; }});
-	operators.push({ name: '==', calculate: function(a, b) { return a == b; }});
-	operators.push({ name: '<>', calculate: function(a, b) { return a != b; }});
-	operators.push({ name: '!=', calculate: function(a, b) { return a != b; }});
-	operators.push({ name: '&', calculate: function(a, b) { return a & b; }});
-	operators.push({ name: '|', calculate: function(a, b) { return a | b; }});
-	operators.push({ name: 'xor', calculate: function(a, b) { return a ^ b; }});
-	operators.push({ name: '&&', calculate: function(a, b) { return a && b; }});
-	operators.push({ name: 'and', calculate: function(a, b) { return a && b; }});
-	operators.push({ name: '||', calculate: function(a, b) { return a || b; }});
-	operators.push({ name: 'or', calculate: function(a, b) { return a || b; }});
+	// En Javascript : https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Operator_Precedence
+	// En Java : https://docs.oracle.com/javase/tutorial/java/nutsandbolts/operators.html
+	var precedence = 12;
+	var operators = {};
+	
+	function add(name, calculate) {
+		var op = { name: lang(name), precedence: precedence, calculate: calculate };
+		jsep.addBinaryOp(op.name, op.precedence);
+		operators[op.name] = op;
+	}
+
+	add('*', function(a, b) { return a * b; });
+	add('/', function(a, b) { return a / b; });
+	add('%', function(a, b) { return a % b; });
+	precedence--;
+	add('+', function(a, b) { return a + b; });
+	add('-', function(a, b) { return a - b; });
+	precedence--;
+	add('<<', function(a, b) { return a << b; });
+	add('>>', function(a, b) { return a >> b; });
+	add('>>>', function(a, b) { return a >>> b; });
+	precedence--;
+	add('<', function(a, b) { return a < b; });
+	add('>', function(a, b) { return a > b; });
+	add('<=', function(a, b) { return a <= b; });
+	add('>=', function(a, b) { return a >= b; });
+	add('in', function(a, b) { return b.indexOf(a) >= 0; });
+	precedence--;
+	add('===', function(a, b) { return a === b; });
+	add('!==', function(a, b) { return a !== b; });
+	add('=', function(a, b) { return a == b; });
+	add('==', function(a, b) { return a == b; });
+	add('<>', function(a, b) { return a != b; });
+	add('!=', function(a, b) { return a != b; });
+	precedence--;
+	add('&', function(a, b) { return a & b; });
+	precedence--;
+	add('^', function(a, b) { return a ^ b; });
+	precedence--;
+	add('|', function(a, b) { return a | b; });
+	precedence--;
+	add('&&', function(a, b) { return a && b; });
+	precedence--;
+	add('||', function(a, b) { return a || b; });
+
 	return operators;
 };
 
 Calculator.prototype.createUnaryOperators = function() {
-	var operators = [];
-	operators.push({ name: '+', calculate: function(a) { return a; }});
-	operators.push({ name: '-', calculate: function(a) { return -a; }});
-	operators.push({ name: '!', calculate: function(a) { return !a; }});
-	operators.push({ name: '²', calculate: function(a) { return Math.pow(a, 2); }});
-	operators.push({ name: '√', calculate: function(a) { return Math.sqrt(a); }});
-	operators.push({ name: '~', calculate: function(a) { return ~a; }});
+	var operators = {};
+
+	function add(name, calculate) {
+		var op = { name: lang(name), calculate: calculate };
+		jsep.addUnaryOp(op.name);
+		operators[op.name] = op;
+	}
+
+	add('+', function(a) { return a; });
+	add('-', function(a) { return -a; });
+	add('!', function(a) { return !a; });
+	add('²', function(a) { return Math.pow(a, 2); });
+	add('√', function(a) { return Math.sqrt(a); });
+	add('~', function(a) { return ~a; });
+
 	return operators;
 };
 
 Calculator.prototype.createFunctions = function() {
-	var functions = [];
+	var functions = {};
+
+	function add(name, arguments, calculate) {
+		var f = { name: lang(name), arguments: arguments ? lang(arguments) : '', calculate: calculate || Math[name] };
+		functions[f.name] = f;
+	}
+
 	'random'.split(',').forEach(function(name, index) {
-		functions.push({ name: name, arguments: '', calculate: Math[name]});
+		add(name);
 	});
+
 	'abs,cos,sin,tan,acos,asin,atan,ceil,floor,round,exp,log,sqrt'.split(',').forEach(function(name, index) {
-		functions.push({ name: name, arguments: 'x', calculate: Math[name]});
+		add(name, 'x');
 	});
+
 	'pow'.split(',').forEach(function(name, index) {
-		functions.push({ name: name, arguments: 'x, n', calculate: Math[name]});
+		add(name, 'x, n');
 	});
+
 	'min,max'.split(',').forEach(function(name, index) {
-		functions.push({ name: name, arguments: 'x, y*', calculate: Math[name]});
+		add(name, 'x, y*');
 	});
-	functions.push({ name: 'if', arguments: 'test, trueValue, falseValue', calculate: function(t, v1, v2) { return t ? v1 : v2; }});
+
+	add('if', 'test, trueValue, falseValue', function(t, v1, v2) { return t ? v1 : v2; });
+
 	return functions;
 };
 
@@ -141,6 +189,13 @@ $(function() {
 	var input = document.getElementById('calculator-content'),
 		calculator = new Calculator();
 
+	// Traduire si demandé le texte des boutons
+	$('button').each(function(index, button) {
+		var translation = language[$(button).text()];
+		if (translation)
+			button.innerHTML = translation;
+	});
+
 	function calculate() {
 		var val, output;
 		try {
@@ -189,7 +244,6 @@ $(function() {
 		if ((event.keyCode || event.which) === 13)
 			calculate();
 	});
-
 
 	/* Le bouton qui ouvre/ferme la partie à droite */
 	$('#calculator-keyboard .help').click(function() {

@@ -25,5 +25,6 @@ NB : quand le certificat HTTPS est incorrect, la mise en cache échouera sous Ch
 
 - Recherche : http://stackoverflow.com/questions/1823612/lexer-written-in-javascript
 - Recherche : http://stackoverflow.com/questions/1052470/javascript-parser-for-simple-expression
-- Math.js : http://mathjs.org/download.html
+- Math.js, plus lourd que "jsep" et plus limité aux math : http://mathjs.org/download.html
+- PEG.js; pour se construire des parseurs à partir de la syntaxe : http://pegjs.org/
 - Tutoriel : [partie 1](http://ariya.ofilabs.com/2011/08/math-evaluator-in-javascript-part1.html), [partie 2](http://ariya.ofilabs.com/2011/08/math-evaluator-in-javascript-part-2.html) et [partie 3](http://ariya.ofilabs.com/2011/08/math-expression-evaluator-in-javascript-part-3.html)
