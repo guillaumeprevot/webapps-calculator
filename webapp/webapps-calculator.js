@@ -7,7 +7,7 @@ var languages = {
 		'pow': 'puissance',
 		'if': 'si',
 		'test, trueValue, falseValue': 'test, valeurVrai, valeurFaux',
-		'convert': 'conversion',
+		'convert': 'convertir',
 		'1, \'srcUnit\', \'dstUnit\'': '1, \'de\', \'vers\'',
 		'Money': 'Monétaire'
 	},
@@ -27,6 +27,7 @@ function Calculator() {
 	this.binaryOperators = this.createBinaryOperators();
 	this.unaryOperators = this.createUnaryOperators();
 	this.functions = this.createFunctions();
+	jsep.addLiteral('pi', Math.PI);
 };
 
 Calculator.prototype.createBinaryOperators = function() {
@@ -129,8 +130,10 @@ Calculator.prototype.createFunctions = function() {
 
 Calculator.prototype.eval = function(tree) {
 	var operator, value, left, right, call, array;
-	if (typeof tree === 'string')
+	if (typeof tree === 'string') {
 		tree = jsep(tree);
+		// this.debug(tree);
+	}
 	switch (tree.type) {
 		case 'Literal':
 			return tree.value;
@@ -193,27 +196,33 @@ Calculator.prototype.debug = function(tree) {
 function Convertor() {
 	this.categories = [];
 
-	this.startCategory('Angle');
-	this.addUnit('degré', 1, 'deg');
-	this.addUnit('grade', 0.9, 'gon');
+	this.startCategory('Accélération', 'Vitesse_et_acc.C3.A9l.C3.A9ration');
+	this.addUnit('mètre par seconde carrée', 1, 'm/s²');
+	this.addUnit('gravité', 9.80665, 'g');
+	this.addUnit('gal', 0.01, 'Gal', 'galileo');
+
+	this.startCategory('Angle', 'Angle');
+	this.addUnit('degré', 1, '°', 'deg', 'degree');
+	this.addUnit('grade', 0.9, 'gr', 'gon', 'gradian'); // 1/100 d'angle droit
 	this.addUnit('radian', 360 / (2 * Math.PI), 'rad');
-	this.addUnit('angle droit', 90, '');
-	this.addUnit('révolution', 360, '');
-	this.addUnit('tour', 360, '');
+	this.addUnit('signe', 30, '', 'sign');
+	this.addUnit('octant', 45, '');
+	this.addUnit('sextant', 60, '');
+	this.addUnit('quadrant', 90, '', 'angle droit');
+	this.addUnit('révolution', 360, '', 'tour');
 	this.addUnit('minute angulaire', { d: 60 }, '′'); // ou arcminute ou Minute d'arc
 	this.addUnit('seconde angulaire', { d: 3600 }, '″'); // ou arcseconde ou Seconde d'arc
 
-	this.startCategory('Charge');
+	this.startCategory('Charge', '.C3.89lectricit.C3.A9');
 	this.addUnit('ampère heure', 1000, 'Ah');
 	this.addUnit('milliampère heure', 1, 'mAh');
-	this.addUnit('coulomb', { m: 1000, d: 3600 }, ''); // 1 As
-	this.addUnit('nanoseconde', 1111, '');
+	this.addUnit('coulomb', { m: 1000, d: 3600 }, 'C'); // 1 As
 
-	this.startCategory('Energie');
+	this.startCategory('Energie', '.C3.89nergie');
 	this.addUnit('calorie', 4.1868, 'cal'); // calorie
 	this.addUnit('kilocalorie', 4186.8, 'kcal'); // kilocalorie
 	this.addUnit('thermie', 4186800, 'th'); // Mégacalorie
-	this.addUnit('joule', 1, 'J'); // joule
+	this.addUnit('joule', 1, 'J', 'newton-meter'); // joule
 	this.addUnit('kilojoule', 1000, 'kJ'); // kilojoule
 	this.addUnit('watt heure', 3600, 'Wh'); // watt-hour
 	this.addUnit('kilowatt heure', 3600000, 'kWh'); // kilowatt-hour
@@ -225,22 +234,28 @@ function Convertor() {
 	this.addUnit('tonne TNT', 4.184e9, ''); // wikipedia FR explique pourquoi 4.184 et pas 4.6
 	this.addUnit('Hiroshima', 15000 * 4.184e9, 'Little Boy'); // 15 000 tonnes TNT
 	this.addUnit('Nagasaki', 22000 * 4.184e9, 'Fat Man'); // 21 à 23 000 tonnes TNT
-	this.addUnit('newton-meter', 1, ''); // newton-meter
 	this.addUnit('erg', 1e-7, '');
 
-	this.startCategory('Intensité lumineuse');
+	this.startCategory('Force', 'Force');
+	this.addUnit('newton', 1, 'N'); // 1 kg.m/s2
+	this.addUnit('dyne', 1e-5, 'dyn');
+	this.addUnit('sthène', 1000, 'sn');
+	this.addUnit('gramme-force', 9.80665e-3, 'gf', 'gravet'); // 1 g.gn
+	this.addUnit('kilogramme-force', 9.80665, 'kgf', 'kilopond'); // 1 kg.gn
+	this.addUnit('ounce-force', 0.2780138509537812, 'ozf'); // 1 oz av × gn
+	this.addUnit('pound-force', 4.4482216152605, 'lbf'); // 1 lb av × gn
+
+	this.startCategory('Intensité lumineuse', 'Lumi.C3.A8re');
 	this.addUnit('candela', 0.1, 'cd');
 	this.addUnit('bougie', 1.018, '');
 	this.addUnit('carcel', 9.8, '');
 
-	this.startCategory('Longueur');
+	this.startCategory('Longueur', 'Longueur');
 	this.addUnits(1, 10, 'nm,nanomètre,,,,,μm,micromètre,,,,,mm,millimètre,cm,centimètre,dm,décimètre,m,mètre,dam,décamètre,hm,hectomètre,km,kilomètre,,,,,Mm,mégamètre');
 	this.addUnit('ångström', 0.1, 'Å');
-	this.addUnit('brasse', 1828800000, '');
 	this.addUnit('chaîne', 20116800000, ''); // 1000 liens
 	this.addUnit('lien', 201168000, '');
-	this.addUnit('levée', 101600000, '');
-	this.addUnit('main', 101600000, ''); // 0.1016 mètre
+	this.addUnit('main', 101600000, '', 'levée'); // 0.1016 mètre
 	this.addUnit('micron', 1000, '');
 	this.addUnit('mil (US)', 25400, '');
 	this.addUnit('mille', 1609344000000, 'mi');
@@ -248,7 +263,7 @@ function Convertor() {
 	this.addUnit('parcours', 228600000, '');
 	this.addUnit('perche', 5029200000, '');
 	this.addUnit('pica', { m: 25400000, d: 6 }, ''); // 1/6 de pouce https://en.wikipedia.org/wiki/Pica_%28typography%29
-	this.addUnit('toise', 1828800000, ''); // 6 pieds
+	this.addUnit('toise', 1828800000, '', 'brasse'); // 6 pieds
 	this.addUnit('aune', 1219200000, ''); // 4 pieds
 	this.addUnit('yard', 914400000, 'yd'); // 3 pieds
 	this.addUnit('verge', 914400000, 'vg'); // Verge = nom français de "yard"
@@ -265,7 +280,7 @@ function Convertor() {
 	this.addUnit('terrain de football', 91440000000, '');  // 100 yard
 	this.addUnit('unité astronomique', 149597870700000000000, 'ua'); // 149597870700 mètres
 
-	this.startCategory('Masse');
+	this.startCategory('Masse', 'Masse');
 	this.addUnits(1, 10, 'mg,milligramme,cg,centigramme,dg,décigramme,g,gramme,dag,décagramme,hg,hectogramme,kg,kilogramme,,,q,quintal,t,tonne');
 	this.addUnit('carat', 200, 'ct');
 	this.addUnit('livre', 453592.37, 'lb');
@@ -275,18 +290,39 @@ function Convertor() {
 	this.addUnit('stone', 6350293.18, 'st'); // 14 livres
 	this.addUnit('tonne courte', 907184740, 'sh t'); // 2000 livres
 	this.addUnit('tonne longue', 1016046908.8, 'ton'); // 2240 livres
+	this.addUnit('quintal court', 45359237, 'sh cwt'); // short hundredweight cental = 100 lb av = 45,359 237 kg
+	this.addUnit('quintal long', 50802345.44, 'long cwt'); // long hundredweight cental = 112 lb av = 50,802 345 44 kg
+	this.addUnit('once romaine', 27264, 'uncia');
 	this.addUnit('once troy', 31103.4768, 'oz t');
 	this.addUnit('once avoirdupois', 28349.523125, 'oz av');
+	this.addUnit('livre romaine', 12 * 27264, 'libra'); // 12 once romaine
 	this.addUnit('livre troy', 373241.7216, 'lb t'); // 12 once troy
 	this.addUnit('livre avoirdupois', 453592.37, 'lb av'); // 16 once avoirdupois
+	this.addUnit('mine romaine', 16 * 27264, 'mina'); // 16 once romaine
 	this.addUnit('masse solaire', 1.9884e36, ''); // 1.98855e30 kg sur wikipedia EN mais 1.9884e30 kg sur wikipedia FR
-	this.addUnit('masse atomique', 1.660538921e-21, 'u'); // 1.660539040e−27 kg sur wikipedia EN mais 1.660538921e-27 kg sur wikipedia FR
+	this.addUnit('masse atomique', 1.660538921e-21, 'u', 'dalton', 'uma', 'Da'); // 1.660539040e−27 kg sur wikipedia EN mais 1.660538921e-27 kg sur wikipedia FR
 
-	// this.startCategory('Pression');
+	this.startCategory('Pression', 'Pression');
+	this.addUnit('pascal', 1, 'Pa'); // 1 N/m²
+	this.addUnit('barye', 0.1, 'ba'); // 1 dyn/cm2
+	this.addUnit('bar', 100000, 'bar');
+	this.addUnit('pièze', 1000, 'pz');
+	this.addUnit('atmosphère', 101325, 'atm', 'atmosphere');
+	this.addUnit('atmosphère technique', 98066, 'at', 'technical atmosphere');
+	this.addUnit('livre par pied carré', 47.9, 'psf', 'pound per square foot'); // 1 lb av × gn / 1 sq ft
 
-	// this.startCategory('Puissance');
+	this.startCategory('Puissance', 'Puissance');
+	this.addUnit('watt', 1, 'W'); // = 1 J/s = 1 kg.m2.s-3
+	this.addUnit('joule par seconde', 1, 'J.s-1');
+	this.addUnit('newton-mètre par seconde', 1, 'N.m.s-1');
+	this.addUnit('kilogramme mètre carré par seconde au cube', 1, 'kg.m2.s-3');
+	this.addUnit('kilowatt', 1000, 'kW');
+	this.addUnit('mégawatt', 1e6, 'MW');
+	this.addUnit('gigawatt', 1e9, 'GW');
+	this.addUnit('térawatt', 1e12, 'TW');
+	this.addUnit('erg par seconde', 1e-7, ''); // 1 g.cm2.s-3
 
-	this.startCategory('Surface');
+	this.startCategory('Surface', 'Superficie');
 	this.addUnit('millimètre carré', 0.000001, 'mm²');
 	this.addUnit('centimètre carré', 0.0001, 'cm²');
 	this.addUnit('décimètre carré', 0.01, 'dm²');
@@ -303,33 +339,38 @@ function Convertor() {
 	this.addUnit('pouce carré', { m: 0.09290304, d: 12*12}, 'in²'); // 1 pouce = 1/12 de pied
 	this.addUnit('acre', 4046.856422, '');
 
-	this.startCategory('Température');
+	this.startCategory('Température', 'Temp.C3.A9rature');
 	this.addUnit('Celsius', { m: 1.8, o: 491.57 }, '°C');
 	this.addUnit('Fahrenheit', { m: 1, o: 459.57 }, '°F');
 	this.addUnit('Rankine', 1, 'R', '°Ra');
 	this.addUnit('kelvin', 1.8, 'K');
 	this.addUnit('Réaumur', { m: 2.25, o: 491.67 }, 'r', '°Ré');
 
-	this.startCategory('Temps');
-	this.addUnit('nanoseconde', 1, 'ns');
-	this.addUnit('microseconde', 1000, 'μs');
-	this.addUnit('milliseconde', 1000000, 'ms');
-	this.addUnit('seconde', 1000000000, 's');
-	this.addUnit('minute', 60000000000, 'min');
-	this.addUnit('heure', 3600000000000, 'h');
-	this.addUnit('jour', 86400000000000, 'j');
-	this.addUnit('semaine', 604800000000000, '');
-	this.addUnit('mois', { m: 31556926080000000, d: 12 }, ''); // 1/12 d'année
-	this.addUnit('année', 31556926080000000, ''); // 365.2422 jours
-	this.addUnit('an', 31556926080000000, '');
-	this.addUnit('fortnight', 1209600000000000, ''); // 14 jours
-	this.addUnit('décennie', 315569260800000000, '');
-	this.addUnit('siècle', 3155692608000000000, '');
-	this.addUnit('millénaire', 31556926080000000000, '');
+	this.startCategory('Temps', 'Temps');
+	this.addUnit('nanoseconde', 1e-9, 'ns');
+	this.addUnit('microseconde', 1e-6, 'μs');
+	this.addUnit('milliseconde', 1e-3, 'ms');
+	this.addUnit('seconde', 1, 's');
+	this.addUnit('minute', 60, 'min');
+	this.addUnit('heure', 3600, 'h');
+	this.addUnit('jour', 86400, 'j');
+	this.addUnit('semaine', 604800, '');
+	this.addUnit('mois', { m: 31556926.08, d: 12 }, ''); // 1/12 d'année
+	this.addUnit('année', 31556926.08, ''); // 365.2422 jours
+	this.addUnit('an', 31556926.08, '');
+	this.addUnit('fortnight', 1209600, ''); // 14 jours
+	this.addUnit('décennie', 315569260.8, '');
+	this.addUnit('siècle', 3155692608, '');
+	this.addUnit('millénaire', 31556926080, '');
+	this.addUnit('Plank', 5.39106e-44, 'tP'); // 5.39106e-44 s
 
-	// this.startCategory('Vitesse');
+	this.startCategory('Vitesse', 'Vitesse_et_acc.C3.A9l.C3.A9ration');
+	this.addUnit('mètre par seconde', 1, 'm/s');
+	this.addUnit('kilomètre par heure', { m: 1000, d: 3600 }, 'km/h');
+	this.addUnit('noeud', { m: 1852, d: 3600 }, 'nd'); // 1 M marin/h soit 1.852 km/h
+	this.addUnit('mach', 340, 'Ma'); // soit 1 224 km.h-1
 
-	this.startCategory('Volume');
+	this.startCategory('Volume', 'Volume_-_capacit.C3.A9');
 	this.addUnits(1, 1000, 'mm3,millimètre cube,cm3,centimètre cube,dm3,décimètre cube,m3,mètre cube');
 	this.addUnits(1000, 10, 'ml,millilitre,cl,centilitre,dl,décilitre,l,litre,,,hl,hectolitre');
 	this.addUnit('gallon américain', 3785411.784, '');
@@ -368,6 +409,8 @@ Convertor.prototype.convert = function(value, srcUnit, dstUnit) {
 	var candidates1 = this.findCandidates(srcUnit);
 	if (candidates1.length === 0)
 		throw Error('Unrecognized unit ' + srcUnit);
+	if (!dstUnit)
+		window.open('https://fr.wikipedia.org/wiki/Conversion_des_unit%C3%A9s' + '#' + candidates1[0].category.anchor);
 	var candidates2 = this.findCandidates(dstUnit);
 	if (candidates2.length === 0)
 		throw Error('Unrecognized unit ' + dstUnit);
@@ -391,7 +434,8 @@ Convertor.prototype.findCandidates = function(name) {
 	var candidates = [], nameLC = name.toLowerCase();
 	this.categories.forEach(function(category) {
 		category.units.forEach(function(unit) {
-			if (unit.name.toLowerCase() === nameLC // matches unit name
+			if (unit.name === nameLC // matches unit name
+				|| (unit.alternateNames && unit.alternateNames.indexOf(nameLC) >= 0) // matches one of alternate names
 				|| (unit.symbol && unit.symbol === name)) // matches unit symbol
 				candidates.push({ category: category, unit: unit });
 		});
@@ -399,15 +443,23 @@ Convertor.prototype.findCandidates = function(name) {
 	return candidates;
 };
 
-Convertor.prototype.startCategory = function(name) {
+Convertor.prototype.startCategory = function(name, anchor) {
 	this.category = { name: lang(name), units: [] };
+	if (anchor)
+		this.category.anchor = anchor;
 	this.categories.push(this.category);
 };
 
 Convertor.prototype.addUnit = function(name, value, symbol) {
-	var unit = { name: name, value: value };
+	var unit = { name: lang(name).toLowerCase(), value: value };
 	if (symbol)
 		unit.symbol = symbol;
+	if (arguments.length > 3) {
+		unit.alternateNames = [];
+		for (var i = 3; i < arguments.length; i++) {
+			unit.alternateNames.push(lang(arguments[i]).toLowerCase());
+		}
+	}
 	this.category.units.push(unit);
 };
 

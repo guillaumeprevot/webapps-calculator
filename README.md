@@ -30,3 +30,9 @@ NB : quand le certificat HTTPS est incorrect, la mise en cache échouera sous Ch
 - Math.js, plus lourd que "jsep" et plus limité aux math : http://mathjs.org/download.html
 - PEG.js; pour se construire des parseurs à partir de la syntaxe : http://pegjs.org/
 - Tutoriel : [partie 1](http://ariya.ofilabs.com/2011/08/math-evaluator-in-javascript-part1.html), [partie 2](http://ariya.ofilabs.com/2011/08/math-evaluator-in-javascript-part-2.html) et [partie 3](http://ariya.ofilabs.com/2011/08/math-expression-evaluator-in-javascript-part-3.html)
+
+## TODO
+
+- saisie des angles en radian/degré/grade
+- recherche ?
+- voir aussi https://fr.wikipedia.org/wiki/Conversion_des_unit%C3%A9s
