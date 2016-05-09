@@ -406,11 +406,18 @@ function Convertor() {
 }
 
 Convertor.prototype.convert = function(value, srcUnit, dstUnit) {
+	if (typeof value === 'string') {
+		var candidates = this.findCandidates(value);
+		if (candidates.length > 0) {
+			window.open('https://fr.wikipedia.org/wiki/Conversion_des_unit%C3%A9s' + '#' + candidates[0].category.anchor);
+			throw Error('');
+		} else {
+			throw Error('Use convert(unit) or convert(quantity, srcUnit, dstUnit)');
+		}
+	}
 	var candidates1 = this.findCandidates(srcUnit);
 	if (candidates1.length === 0)
 		throw Error('Unrecognized unit ' + srcUnit);
-	if (!dstUnit)
-		window.open('https://fr.wikipedia.org/wiki/Conversion_des_unit%C3%A9s' + '#' + candidates1[0].category.anchor);
 	var candidates2 = this.findCandidates(dstUnit);
 	if (candidates2.length === 0)
 		throw Error('Unrecognized unit ' + dstUnit);
