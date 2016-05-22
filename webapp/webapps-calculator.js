@@ -424,7 +424,7 @@ Convertor.prototype.convert = function(value, srcUnit, dstUnit) {
 	for (var i1 = 0; i1 < candidates1.length; i1++) {
 		for (var i2 = 0; i2 < candidates2.length; i2++) {
 			if (candidates1[i1].category === candidates2[i2].category) {
-				console.log('Found common category ' + candidates2[i2].category.name, candidates1[i1].unit, candidates2[i2].unit);
+				// console.log('Found common category ' + candidates2[i2].category.name, candidates1[i1].unit, candidates2[i2].unit);
 
 				// Multiply by first unit factor
 				value = this.apply(value, candidates1[i1].unit.value, false);
@@ -609,7 +609,34 @@ $(function() {
 	// Récupérer les taux de change
 	// Taux : http://www.ecb.europa.eu/stats/eurofxref/eurofxref-daily.xml
 	// Noms : http://www.ecb.europa.eu/stats/exchange/eurofxref/html/index.en.html
-	$.get('https://techgp.fr:9001/utils/money/rates', function(data) {
+	function getWithCache(url, cacheKey, cacheExpire, callback) {
+		try {
+			// Récupérer dans localStorage les données si présentes
+			var value = localStorage.getItem(cacheKey);
+			if (value) {
+				// value est de la forme { time: ms, data: data }
+				value = JSON.parse(value);
+				// Si le cache n'est pas trop vieux, on l'utilise
+				if (value.time && (new Date().getTime() - value.time) < 1000 * 60 * 60 * 24) {
+					callback(value.data);
+					return;
+				}
+			}
+		} catch (e) {
+			//
+		}
+		// Si le cache est vide, ou trop vieux, on obsolète (=exception), on récupère des donées à jour
+		$.get(url, function(data) {
+			// On traite les données
+			callback(data);
+			// On met à jour le cache
+			localStorage.setItem(cacheKey, JSON.stringify({
+				time: new Date().getTime(),
+				data: data
+			}));
+		});
+	}
+	getWithCache('https://techgp.fr:9001/utils/money/rates', 'utils-money-rates', 1000 * 60 * 60 * 24, function(data) {
 		// console.log(data)
 		Convertor.prototype.moneyRates = data;
 	});
