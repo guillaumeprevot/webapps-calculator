@@ -8,7 +8,7 @@ A calculator application with usual mathematical features, extendable function s
 
 Les librairies suivantes ont été utilisées pour cette application :
 
-- [jsep 0.3.0](http://jsep.from.so/) sous licence MIT pour analyser les expressions demandées
+- [Parsing Expressions by Recursive Descent](http://www.engr.mun.ca/~theo/Misc/exp_parsing.htm), un formidable article qui montre qu'il est possible de créer un parseur simplement... et qui a mené à l'écriture du parseur utilisé ici.
 - [jQuery 2.2.4](http://jquery.com/) sous licence MIT
 - [ECB](http://www.ecb.europa.eu/stats/exchange/eurofxref/html/index.en.html) pour obtenir des taux de change quotidien
 
@@ -24,13 +24,13 @@ NB : quand le certificat HTTPS est incorrect, la mise en cache échouera sous Ch
 
 ## Liens autres
 
-- Conversion d'unités sur Wikipedia FR : https://fr.wikipedia.org/wiki/Conversion_des_unit%C3%A9s
+- [jsep](http://jsep.from.so/) sous licence MIT, a été utilisé jusqu'au 22/05/2016 pour l'analyse des formules
+- [Conversion d'unités sur Wikipedia FR](https://fr.wikipedia.org/wiki/Conversion_des_unit%C3%A9s), qui a aidé à alimenter les unités utilisées par la fonction de conversion
 - Recherche : http://stackoverflow.com/questions/1823612/lexer-written-in-javascript
 - Recherche : http://stackoverflow.com/questions/1052470/javascript-parser-for-simple-expression
 - Math.js, plus lourd que "jsep" et plus limité aux math : http://mathjs.org/download.html
 - PEG.js; pour se construire des parseurs à partir de la syntaxe : http://pegjs.org/
 - Tutoriel : [partie 1](http://ariya.ofilabs.com/2011/08/math-evaluator-in-javascript-part1.html), [partie 2](http://ariya.ofilabs.com/2011/08/math-evaluator-in-javascript-part-2.html) et [partie 3](http://ariya.ofilabs.com/2011/08/math-expression-evaluator-in-javascript-part-3.html)
-
 
 ### Changelog
 
@@ -63,7 +63,17 @@ NB : quand le certificat HTTPS est incorrect, la mise en cache échouera sous Ch
 - mise à jour de jquery 2.2.2 en 2.2.4
 - mettre en cache dans localStorage les taux de change (pour le mode déconnecté)
 
+2016-05-29
+- remplacement de [JSEP](http://jsep.from.so/) par un parseur fait maison, construit après lecture de l'article [Parsing Expressions by Recursive Descent](http://www.engr.mun.ca/~theo/Misc/exp_parsing.htm)
+
 ## TODO
 
+- corriger l'affichage du résultat si "false" (n'affiche rien pour le moment)
+- restaurer le support des chaines de caractères (dans Literal mais aussi dans la gestion des ' ' dans next())
+- syntaxe pour ( ) [ ] , "
+- support des dates (dans Literal)
+- support des variables
+- "3 + (++2++)" ne semble pas fonctionner
 - saisie des angles en radian/degré/grade
 - recherche ?
+
