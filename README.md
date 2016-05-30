@@ -66,14 +66,17 @@ NB : quand le certificat HTTPS est incorrect, la mise en cache échouera sous Ch
 2016-05-29
 - remplacement de [JSEP](http://jsep.from.so/) par un parseur fait maison, construit après lecture de l'article [Parsing Expressions by Recursive Descent](http://www.engr.mun.ca/~theo/Misc/exp_parsing.htm)
 
+2016-05-30
+- restaurer le support des chaines de caractères (cf Literal et next())
+- corriger l'affichage du résultat si "false" (n'affiche rien pour le moment)
+- terminer la traduction de "calculator.js" en anglais
+- amélioration de "calculator.format" pour que les litéraux repenne la valeur saisie telle quelle
+
 ## TODO
 
-- corriger l'affichage du résultat si "false" (n'affiche rien pour le moment)
-- restaurer le support des chaines de caractères (dans Literal mais aussi dans la gestion des ' ' dans next())
 - syntaxe pour ( ) [ ] , "
 - support des dates (dans Literal)
 - support des variables
-- "3 + (++2++)" ne semble pas fonctionner
 - saisie des angles en radian/degré/grade
 - recherche ?
 

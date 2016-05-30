@@ -328,7 +328,7 @@ $(function() {
 	calculator.addDefaultFunctions(lang);
 	calculator.addDefaultOperators(lang);
 
-	calculator.addFunction(lang('convert'), lang('1, \'srcUnit\', \'dstUnit\''), function(context, n, u1, u2) {
+	calculator.addFunction(lang('convert'), lang('1, "srcUnit", "dstUnit"'), function(context, n, u1, u2) {
 		return new Convertor().convert(context.eval(n), context.eval(u1), context.eval(u2));
 	});
 
@@ -344,10 +344,10 @@ $(function() {
 		try {
 			val = input.value;
 			tree = calculator.parse(val);
-			// console.log(tree);
+			//console.log(calculator.format(tree), tree);
 			output = calculator.eval(tree);
 			// console.log(output);
-			input.value = (output || '').toString();
+			input.value = (output === null) ? 'null' : (typeof output === 'undefined') ? '' : output.toString();
 			setMessage(val, false);
 		} catch (e) {
 			setMessage(e.message, true);

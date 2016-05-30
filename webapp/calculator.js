@@ -176,7 +176,7 @@ Calculator.prototype.addDefaultOperators = function(lang) {
 	add('/', 'left', function(context, a, b) { return context.eval(a) / context.eval(b); });
 	add('%', 'left', function(context, a, b) { return context.eval(a) % context.eval(b); });
 	precedence--;
-	add('+', 'left', function(context, a, b) { return context.eval(a) + context.eval(b); });
+	add('+', 'left', function(context, a, b) { return context.eval(a) + context.eval(b); }); // number addition and string concatenation
 	add('-', 'left', function(context, a, b) { return context.eval(a) - context.eval(b); });
 	precedence--;
 	add('<<', 'left', function(context, a, b) { return context.eval(a) << context.eval(b); });
@@ -311,10 +311,29 @@ Calculator.prototype.error = function(message) {
 
 /** returns the next token of input or special marker "end" to represent that there are no more input tokens. "next" does not alter the input stream. */
 Calculator.prototype.next = function() {
+	// Parsing after string end throws an error
 	if (this.index > this.formula.length)
 		this.error('End of formula has been reached');
+	// The last token when the string is over is an empty token
 	if (this.index === this.formula.length)
 		return '';
+	// Check if a string starts at current position
+	if (this.formula[this.index] === '"') {
+		// In that case, find the next closing quote
+		var previous = '';
+		var i = this.index + 1; 
+		while (i < this.formula.length
+				&& (this.formula[i] !== '"' || previous === '\\')) { // skip despecialized quotes
+			previous = this.formula[i];
+			i++;
+		}
+		//console.log('Next', this.index, i);
+		if (i === this.formula.length)
+			this.error('Un-terminated string starting at position ' + this.index);
+		// Found a string
+		return this.formula.substring(this.index, i + 1);
+	}
+	// Search the next occurence of each separators
 	var index = -1, length = 0;
 	for (var i = 0; i < this.separators.length; i++) {
 		var p = this.formula.indexOf(this.separators[i], this.index);
@@ -339,26 +358,26 @@ Calculator.prototype.next = function() {
 
 /** reads one token. When "next=end", consume is still allowed, but has no effect. */
 Calculator.prototype.consume = function(text) {
-	// On récupère le token suivant, s'il n'est pas passé en paramètre
-	var s = text || this.next(); // in fact, this.next() is never called because each call to 'consume' already knowns what is the next token (= "text" argument)
-	// On avance de sa longueur
+	// Get next token to consume, or use text if provided as optimisation
+	// In fact, this.next() is never called because each call to 'consume' already knowns what is the next token (= "text" argument)
+	var s = text || this.next();
+	// Move forward
 	this.index += s.length;
-	// On mange les espaces après
+	// And skip following spaces
 	while (this.index < this.formula.length && this.formula[this.index] === ' ')
 		this.index++;
 };
 
 /** if next = text then consume else error */
 Calculator.prototype.expect = function(text) {
-	// On récupère le token suivant
+	// Get next token 
 	var s = this.next();
-	// Si ça correspond au texte attendu
+	// Check if this token matches expected text
 	if (s === text)
-		// On avance
+		// OK, consume token
 		this.consume(s);
-	// Sinon
 	else
-		// On lance une erreur, la formule n'est pas correcte
+		// Error, the next token is unexpected
 		this.error('Found "' + s + '" but expecting "' + text + '"');
 };
 
@@ -375,36 +394,37 @@ Calculator.prototype.expect = function(text) {
  * - function(token, params) : une fonction dont token est le nom et params la liste des paramètres 
  */
 Calculator.prototype.eParser = function() {
-	// Parser une valeur
+	// Try to get the Abstract Syntax Tree (AST) for the expression starting at position 0
 	var tree = this.Exp(0);
-	// S'assurer que la formule est terminée, comme prévue
+	// Ensure that the end of the formula is reached, like expected
 	this.expect('');
-	// Retourner le noeud obtenu
+	// Return the AST
 	return tree;
 };
 
 Calculator.prototype.Exp = function(p) {
-	// Récupérer une valeur "primaire", c'est à dire "pas un opérateur"
+	// An expression at precedence "p" is a primary value (meaning "everything except an operator")
 	var tree = this.Primary();
-	// Regarder la suite
+	// Get the next token
 	var token = this.next().toLowerCase();
-	// Si on tombe sur un opérateur adéquat, on va récupérer la partie à droite de l'opérateur
+	// Check if the next token is a binary operator with expected minimum precedence
 	while (this.binaryOperators.hasOwnProperty(token) && this.binaryOperators[token].precedence >= p) {
 		var op = this.binaryOperators[token];
 		this.consume(token);
-		// "q" indique la précédence max des opérateurs autorisés à droite.
-		// C'est ici que la précédence des opérateurs est prise en compte correctement
+		// "q" is the accepted precedence for an operator on the right side of the binary operator "token"
+		// This is where the precedence of operator matters !
 		var q = op.associativity === 'left' ? op.precedence + 1 : op.precedence;
-		// On récupère la partie à droite de l'opérateur.
+		// Get the right part of the binary operator "token"
 		var right = this.Exp(q);
-		// On a notre noeud avec un opérateur binaire, la partie gauche et la partie droite
+		// Create a "binary" AST node
 		tree = {
 			type: 'binary',
 			token: token,
 			left: tree, // a primary in the first loop, a binary after that
 			right: right
 		};
-		// Et on regarde à nouveau la suite pour boucler
+		console.log(tree);
+		// And check if the next token is also a binary operator
 		token = this.next().toLowerCase();
 	}
 	return tree;
@@ -490,28 +510,39 @@ Calculator.prototype.Array = function(type) {
 
 Calculator.prototype.Literal = function(token) {
 	var error = false, tokenLC = token.toLowerCase();
-	function build(value, token) {
+	function build(value, t) {
 		return {
 			type: 'literal',
-			token: token,
+			token: t || token,
 			value: value
 		};
 	}
 
+	// Throw error if the token is a function name
 	if (this.functions.hasOwnProperty(tokenLC) || this.separators.indexOf(tokenLC) >= 0)
 		this.error('Expecting a value but found "' + token + '"');
 
+	// Predefined literal like null, false, true, pi, ...
 	if (this.literals.hasOwnProperty(tokenLC))
 		return build(undefined, tokenLC);
+	// string support
+	if (token.length >= 2 && token[0] === '"' && token[token.length - 1] === '"')
+		return build(token.substring(1, token.length - 1).replace('\\"', '"'));
+	// integer in hexadecimal format support
 	if (token.match(/0x[0-9a-fA-F]+/))
 		return build(parseInt(token.substring(2), 16));
+	// integer in octal format support
 	if (token.match(/0o[0-7]+/))
 		return build(parseInt(token.substring(2), 8));
+	// integer in binary format support
 	if (token.match(/0b[0-1]+/))
 		return build(parseInt(token.substring(2), 2));
+	// float in decimal format support
 	if (token.match(/\d+\.\d+/))
 		return build(parseFloat(token));
+	// integer in decimal format support
 	if (token.match(/\d+/))
 		return build(parseInt(token));
+	// Unsupported format support
 	this.error('Expecting a value but found "' + token + '"');
 };
