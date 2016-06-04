@@ -14,6 +14,8 @@ var languages = {
 	'en': {
 		'&&': 'and',
 		'||': 'or',
+		'convert': 'conv',
+		'random': 'rand',
 	}
 };
 
@@ -23,7 +25,7 @@ function lang(text) {
 	return language[text] || text;
 }
 
-function Convertor() {
+function Converter() {
 	this.categories = [];
 
 	this.startCategory('Accélération', 'Vitesse_et_acc.C3.A9l.C3.A9ration');
@@ -235,7 +237,7 @@ function Convertor() {
 
 }
 
-Convertor.prototype.convert = function(value, srcUnit, dstUnit) {
+Converter.prototype.convert = function(value, srcUnit, dstUnit) {
 	if (typeof value === 'string') {
 		var candidates = this.findCandidates(value);
 		if (candidates.length > 0) {
@@ -267,7 +269,7 @@ Convertor.prototype.convert = function(value, srcUnit, dstUnit) {
 	throw Error('No conversion from ' + srcUnit + ' to ' + dstUnit);
 };
 
-Convertor.prototype.findCandidates = function(name) {
+Converter.prototype.findCandidates = function(name) {
 	var candidates = [], nameLC = name.toLowerCase();
 	this.categories.forEach(function(category) {
 		category.units.forEach(function(unit) {
@@ -280,14 +282,14 @@ Convertor.prototype.findCandidates = function(name) {
 	return candidates;
 };
 
-Convertor.prototype.startCategory = function(name, anchor) {
+Converter.prototype.startCategory = function(name, anchor) {
 	this.category = { name: lang(name), units: [] };
 	if (anchor)
 		this.category.anchor = anchor;
 	this.categories.push(this.category);
 };
 
-Convertor.prototype.addUnit = function(name, value, symbol) {
+Converter.prototype.addUnit = function(name, value, symbol) {
 	var unit = { name: lang(name).toLowerCase(), value: value };
 	if (symbol)
 		unit.symbol = symbol;
@@ -300,7 +302,7 @@ Convertor.prototype.addUnit = function(name, value, symbol) {
 	this.category.units.push(unit);
 };
 
-Convertor.prototype.addUnits = function(startValue, multiplier, units) {
+Converter.prototype.addUnits = function(startValue, multiplier, units) {
 	var parts = units.split(','), value = startValue, i;
 	for (i = 0; i < parts.length; i += 2) {
 		if (parts[i + 1] !== '')
@@ -309,7 +311,7 @@ Convertor.prototype.addUnits = function(startValue, multiplier, units) {
 	}
 };
 
-Convertor.prototype.apply = function(value, conversion, invert) {
+Converter.prototype.apply = function(value, conversion, invert) {
 	var multiplier = 1, divider = 1, offset = 0;
 	if (typeof conversion === 'number')
 		return invert ? (value / conversion) : (value * conversion);
@@ -329,7 +331,7 @@ $(function() {
 	calculator.addDefaultOperators(lang);
 
 	calculator.addFunction(lang('convert'), lang('1, "srcUnit", "dstUnit"'), function(context, n, u1, u2) {
-		return new Convertor().convert(context.eval(n), context.eval(u1), context.eval(u2));
+		return new Converter().convert(context.eval(n), context.eval(u1), context.eval(u2));
 	});
 
 	// Traduire si demandé le texte des boutons
@@ -422,13 +424,37 @@ $(function() {
 
 	/* Le bouton d'inversion du signe */
 	$('#calculator-keyboard .sign').click(function() {
-		var val = input.value;
+		var val = input.value.trim();
 		if (val && val.charAt(0) === '-')
 			input.value = val.substring(1);
 		else if (val.charAt(0) === '+')
 			input.value = '-' + val.substring(1);
 		else
 			input.value = '-' + val;
+	});
+
+	/* Le bouton d'inversion du signe */
+	$('#calculator-keyboard .inverse').click(function() {
+		// Pour savoir s'il faut ajouter  ou supprimer les "(" ")" en plus de "1/", on tente de parser
+		var val = input.value, tree;
+		try {
+			tree = calculator.parse(val);
+			// Si la formule est 1 / xxx
+			if (tree.type === 'binary' && tree.token === '/' && tree.left.type === 'literal' && tree.left.value === 1) {
+				// On ne gardera que xxx, en retirant les éventuelles parenthèses
+				tree = (tree.right.type === 'grouping') ? tree.right.left : tree.right;
+				// La nouvelle formule est reformattée correctement
+				input.value = calculator.format(tree);
+				return;
+			}
+			// Si la formule n'est pas 1 / xxx, il faudra inverser mais on vérifie déjà s'il faut des parenthèses
+			if (tree.type === 'binary')
+				input.value = '1/(' + calculator.format(tree) + ')';
+			else
+				input.value = '1/' + calculator.format(tree);
+		} catch (e) {
+			input.value = '1/(' + val + ')';
+		}
 	});
 
 	/* Le bouton du séparateur décimal */
@@ -479,7 +505,7 @@ $(function() {
 	}
 	getWithCache('https://techgp.fr:9001/utils/money/rates', 'utils-money-rates', 1000 * 60 * 60 * 24, function(data) {
 		// console.log(data)
-		Convertor.prototype.moneyRates = data;
+		Converter.prototype.moneyRates = data;
 	});
 
 });

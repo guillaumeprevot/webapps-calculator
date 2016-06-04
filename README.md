@@ -6,13 +6,14 @@ A calculator application with usual mathematical features, extendable function s
 
 [Cette application](http://techgp.fr/webapps/webapps-calculator.html) écrite en HTML5, JavaScript et CSS3 vous donnera accès à une calculatrice directement dans votre navigateur.
 
-Les librairies suivantes ont été utilisées pour cette application :
+Les liens suivants ont été utiles pour cette application :
 
-- [Parsing Expressions by Recursive Descent](http://www.engr.mun.ca/~theo/Misc/exp_parsing.htm), un formidable article qui montre qu'il est possible de créer un parseur simplement... et qui a mené à l'écriture du parseur utilisé ici.
+- [Parsing Expressions by Recursive Descent](http://www.engr.mun.ca/~theo/Misc/exp_parsing.htm), un formidable article qui propose une méthode simple à implémenter pour créer un parseur... et qui a mené à l'écriture du parseur utilisé ici.
+- [jsep](http://jsep.from.so/), pour JavaScript Expression Parser, sous licence MIT, qui été utilisé jusqu'au 22/05/2016 pour l'analyse des formules. L'API comme le code sont simples à comprendre.
 - [jQuery 2.2.4](http://jquery.com/) sous licence MIT
-- [ECB](http://www.ecb.europa.eu/stats/exchange/eurofxref/html/index.en.html) pour obtenir des taux de change quotidien
+- [ECB](http://www.ecb.europa.eu/stats/exchange/eurofxref/html/index.en.html) qui utilisé dans le convertisseur monétaire pour obtenir des taux de change quotidien
 
-L'application est fournie avec un fichier manifest `webapps-calculator.appcache` permettant la mise en cache et l'utilisation en mode déconnecté. Plus d'info chez Mozilla [en français](https://developer.mozilla.org/fr/docs/Utiliser_Application_Cache) ou [en anglais](https://developer.mozilla.org/en-US/docs/Web/HTML/Using_the_application_cache).
+L'application peut être utilisée en mode déconnecté après une première utilisation. Le fichier manifest `webapps-calculator.appcache` décrit comme doit se faire la mise en cache. Plus d'info chez Mozilla [en français](https://developer.mozilla.org/fr/docs/Utiliser_Application_Cache) ou [en anglais](https://developer.mozilla.org/en-US/docs/Web/HTML/Using_the_application_cache).
 
 NB : quand le certificat HTTPS est incorrect, la mise en cache échouera sous Chrome avec l'erreur `Manifest fetch Failed (9)`. Dans ce cas, faites les tests en HTTP et/ou utilisez un certificat valide en production.
 
@@ -22,10 +23,18 @@ NB : quand le certificat HTTPS est incorrect, la mise en cache échouera sous Ch
 
 ![Présentation de l'IHM](./screenshots/webapps-calculator-1.png)
 
+### Utilisation du convertisseur (monétaire par l'exemple)
+
+![Présentation de l'IHM](./screenshots/webapps-calculator-2.png)
+
+### Accès aux fonctions avancées
+
+![Présentation de l'IHM](./screenshots/webapps-calculator-3.png)
+
 ## Liens autres
 
-- [jsep](http://jsep.from.so/) sous licence MIT, a été utilisé jusqu'au 22/05/2016 pour l'analyse des formules
 - [Conversion d'unités sur Wikipedia FR](https://fr.wikipedia.org/wiki/Conversion_des_unit%C3%A9s), qui a aidé à alimenter les unités utilisées par la fonction de conversion
+- [Documentation de Math chez Mozilla](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math), avec polyfill pour sinh, cosh, tanh, asinh, acosh, atanh, hypot, log2, log10, log1p, imul, clz32
 - Recherche : http://stackoverflow.com/questions/1823612/lexer-written-in-javascript
 - Recherche : http://stackoverflow.com/questions/1052470/javascript-parser-for-simple-expression
 - Math.js, plus lourd que "jsep" et plus limité aux math : http://mathjs.org/download.html
@@ -72,11 +81,17 @@ NB : quand le certificat HTTPS est incorrect, la mise en cache échouera sous Ch
 - terminer la traduction de "calculator.js" en anglais
 - amélioration de "calculator.format" pour que les litéraux repenne la valeur saisie telle quelle
 
+2016-06-04
+- correction d'un bug sur l'évaluation de litéraux que Javascript assimile à faux (le nombre 0, le texte vide)
+- homogénéisation du clavier de la calculatrice avec les opérateurs et fonctions du calculateur
+- ajout de "1/x" (inverse), "e" (Euler's number), "³" (cubic), "cbrt" (cubic root), "!" (factorielle) et "atan2" (atan2(x, y) = atan(x/y))
+
 ## TODO
 
-- syntaxe pour ( ) [ ] , "
+- support de la notation 2.1e3 pour 2 * 10^3 
+- syntaxe pour ( ) [ ] , " + dateFormat
 - support des dates (dans Literal)
-- support des variables
+- support des variables + ajout des touches (++, --, =) et des opérateurs manquants (+= -= ...)
+- ajout de +ror, +rol (operator décallage de bit avec rotation), présents dans la calculette windows
 - saisie des angles en radian/degré/grade
 - recherche ?
-

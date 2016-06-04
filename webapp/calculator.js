@@ -1,5 +1,5 @@
 /**
- * A literal is a token, associated with a value (for instance : "true", "false", "null", "pi", ... ").
+ * A literal is a token, associated with a value (for instance : "true", "false", "null", "pi", "e"... ").
  *
  * Example for "true" literal : new CalculatorLiteral('true', true)
  *
@@ -94,6 +94,7 @@ Calculator.prototype.addDefaultLiterals = function(lang) {
 	add('false', false);
 	add('null', null);
 	add('pi', Math.PI);
+	add('e', Math.E);
 };
 
 /**
@@ -126,9 +127,10 @@ Calculator.prototype.addDefaultFunctions = function(lang) {
 
 	'random'.split(',').forEach(function(token) { addFromMath(token); });
 	'abs,cos,sin,tan,acos,asin,atan,ceil,floor,round,exp,log,sqrt'.split(',').forEach(function(token) { addFromMath(token, 'x'); });
-	'pow'.split(',').forEach(function(token) { addFromMath(token, 'x, n'); });
+	'pow,atan2'.split(',').forEach(function(token) { addFromMath(token, 'x, y'); });
 	'min,max'.split(',').forEach(function(token) { addFromMath(token, 'x, y*'); });
 
+	calculator.addFunction(lang('cbrt'), lang('x'), function(context, x) { return (x < 0 ? -1 : 1) * Math.pow(Math.abs(context.eval(x)), 1/3); });
 	calculator.addFunction(lang('if'), lang('test, trueValue, falseValue'), function(context, t, v1, v2) { return context.eval(t) ? context.eval(v1) : context.eval(v2); });
 };
 
@@ -161,19 +163,22 @@ Calculator.prototype.addDefaultOperators = function(lang) {
 	// add('.', 'left', function(context, a, b) { return context.eval(a)[context.eval(b)]; }); // member access
 	precedence--;
 	add('²', 'postfix', function(context, a) { return Math.pow(context.eval(a), 2); });
+	add('³', 'postfix', function(context, a) { return Math.pow(context.eval(a), 3); });
 	add('++', 'postfix', function(context, variable) { return variable.value++; });
 	add('--', 'postfix', function(context, variable) { return variable.value--; });
+	add('!', 'postfix', function(context, a) { var result = 1; var v = Math.round(context.eval(a)); while (v !== 0) result *= v--; return result; }); // factorielle
 	precedence--;
+	add('√', 'prefix', function(context, a) { return Math.sqrt(context.eval(a)); });
 	add('!', 'prefix', function(context, a) { return !context.eval(a); }); // logical not
-	add('~', 'prefix', function(context, a) { return ~context.eval(a); }); //bitwise not
+	add('~', 'prefix', function(context, a) { return ~context.eval(a); }); // bitwise not
 	add('+', 'prefix', function(context, a) { return +context.eval(a); });
 	add('-', 'prefix', function(context, a) { return -context.eval(a); });
 	add('++', 'prefix', function(context, variable) { return ++variable.value; });
 	add('--', 'prefix', function(context, variable) { return --variable.value; });
 	precedence--;
 	add('**', 'right', function(context, a, b) { return Math.pow(context.eval(a), context.eval(b)); });
-	add('*', 'left', function(context, a, b) { return context.eval(a) * context.eval(b); });
-	add('/', 'left', function(context, a, b) { return context.eval(a) / context.eval(b); });
+	add('*', 'left', function(context, a, b) { return context.eval(a) * context.eval(b); }); // &#x00D7;
+	add('/', 'left', function(context, a, b) { return context.eval(a) / context.eval(b); }); // &#x00F7;
 	add('%', 'left', function(context, a, b) { return context.eval(a) % context.eval(b); });
 	precedence--;
 	add('+', 'left', function(context, a, b) { return context.eval(a) + context.eval(b); }); // number addition and string concatenation
@@ -185,21 +190,21 @@ Calculator.prototype.addDefaultOperators = function(lang) {
 	precedence--;
 	add('<', 'left', function(context, a, b) { return context.eval(a) < context.eval(b); });
 	add('>', 'left', function(context, a, b) { return context.eval(a) > context.eval(b); });
-	add('<=', 'left', function(context, a, b) { return context.eval(a) <= context.eval(b); });
-	add('>=', 'left', function(context, a, b) { return context.eval(a) >= context.eval(b); });
+	add('<=', 'left', function(context, a, b) { return context.eval(a) <= context.eval(b); }); // &#x2264;
+	add('>=', 'left', function(context, a, b) { return context.eval(a) >= context.eval(b); }); // &#x2265;
 	add('in', 'left', function(context, a, b) { return context.eval(b).indexOf(context.eval(a)) >= 0; });
 	// instanceof
 	precedence--;
 	add('===', 'left', function(context, a, b) { return context.eval(a) === context.eval(b); });
 	add('!==', 'left', function(context, a, b) { return context.eval(a) !== context.eval(b); });
 	add('==', 'left', function(context, a, b) { return context.eval(a) == context.eval(b); });
-	add('!=', 'left', function(context, a, b) { return context.eval(a) != context.eval(b); });
+	add('!=', 'left', function(context, a, b) { return context.eval(a) != context.eval(b); }); // &#x2260;
 	precedence--;
-	add('&', 'left', function(context, a, b) { return context.eval(a) & context.eval(b); });
+	add('&', 'left', function(context, a, b) { return context.eval(a) & context.eval(b); }); // bitwise AND
 	precedence--;
-	add('^', 'left', function(context, a, b) { return context.eval(a) ^ context.eval(b); });
+	add('^', 'left', function(context, a, b) { return context.eval(a) ^ context.eval(b); }); // bitwise XOR
 	precedence--;
-	add('|', 'left', function(context, a, b) { return context.eval(a) | context.eval(b); });
+	add('|', 'left', function(context, a, b) { return context.eval(a) | context.eval(b); }); // bitwise OR
 	precedence--;
 	add('&&', 'left', function(context, a, b) { return context.eval(a) && context.eval(b); });
 	precedence--;
@@ -282,7 +287,7 @@ Calculator.prototype.format = function(tree) {
 Calculator.prototype.eval = function(tree) {
 	switch (tree.type) {
 		case 'literal': // 1, 123.45, true, null, pi, ...
-			return tree.value || this.literals[tree.token].value;
+			return (typeof tree.value !== 'undefined') ? tree.value : this.literals[tree.token].value;
 		case 'array': // [ params ]
 			return tree.params.map(this.eval.bind(this));
 		case 'grouping': // ( ... )
@@ -327,7 +332,6 @@ Calculator.prototype.next = function() {
 			previous = this.formula[i];
 			i++;
 		}
-		//console.log('Next', this.index, i);
 		if (i === this.formula.length)
 			this.error('Un-terminated string starting at position ' + this.index);
 		// Found a string
@@ -423,7 +427,6 @@ Calculator.prototype.Exp = function(p) {
 			left: tree, // a primary in the first loop, a binary after that
 			right: right
 		};
-		console.log(tree);
 		// And check if the next token is also a binary operator
 		token = this.next().toLowerCase();
 	}
@@ -543,6 +546,6 @@ Calculator.prototype.Literal = function(token) {
 	// integer in decimal format support
 	if (token.match(/\d+/))
 		return build(parseInt(token));
-	// Unsupported format support
+	// Unsupported literal
 	this.error('Expecting a value but found "' + token + '"');
 };
