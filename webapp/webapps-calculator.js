@@ -376,7 +376,9 @@ $(function() {
 		var button = $(event.target);
 		insert(button.attr('data-content') || button.text());
 	}).on('click', 'button.operator', function(event) {
-		insert(' ' + $(event.target).text() + ' ');
+		var button = $(event.target),
+			op = button.attr('data-operator') || button.text();
+		insert(' ' + op + ' ');
 	}).on('click', 'button.function', function(event) {
 		var button = $(event.target),
 			name = button.attr('data-function') || button.text(),
