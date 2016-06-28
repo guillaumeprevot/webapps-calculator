@@ -41,10 +41,14 @@ NB : quand le certificat HTTPS est incorrect, la mise en cache échouera sous Ch
 - PEG.js; pour se construire des parseurs à partir de la syntaxe : http://pegjs.org/
 - Tutoriel : [partie 1](http://ariya.ofilabs.com/2011/08/math-evaluator-in-javascript-part1.html), [partie 2](http://ariya.ofilabs.com/2011/08/math-evaluator-in-javascript-part-2.html) et [partie 3](http://ariya.ofilabs.com/2011/08/math-expression-evaluator-in-javascript-part-3.html)
 
-### Changelog
+## Licence
+
+Ce projet est distribué sous licence MIT, reproduite dans le fichier LICENSE ici présent.
+
+## Changelog
 
 2016-04-25
-- Première version
+- première version
 
 2016-04-26
 - function names and operators are case-insensitive
@@ -85,6 +89,9 @@ NB : quand le certificat HTTPS est incorrect, la mise en cache échouera sous Ch
 - correction d'un bug sur l'évaluation de litéraux que Javascript assimile à faux (le nombre 0, le texte vide)
 - homogénéisation du clavier de la calculatrice avec les opérateurs et fonctions du calculateur
 - ajout de "1/x" (inverse), "e" (Euler's number), "³" (cubic), "cbrt" (cubic root), "!" (factorielle) et "atan2" (atan2(x, y) = atan(x/y))
+
+2016-06-28
+- ajout du fichier LICENCE
 
 ## TODO
 
