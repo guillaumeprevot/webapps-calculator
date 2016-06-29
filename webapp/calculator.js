@@ -48,6 +48,38 @@ function CalculatorOperator(token, precedence, associativity, calculate) {
 }
 
 /**
+ * A parsing error, providing information about original formula, parsing position and message.
+ *
+ * @param {String} formula - the formula where error occured
+ * @param {Number} index - the position in the formula where error occured
+ * @param {String} message - the error message, that may contain parameters %0, %1, ...
+ * @param {Array} params - the array of parameters, used to format
+ */
+function CalculatorError(formula, index, message, params) {
+	this.formula = formula;
+	this.index = index;
+	this.message = message;
+	this.params = params;
+}
+
+CalculatorError.prototype.console = function() {
+	// Show formula on console
+	console.log(this.formula);
+	// Show error index in formula with ^
+	console.log(' '.repeat(this.index) + '^');
+};
+
+CalculatorError.prototype.format = function(lang) {
+	var s = lang(this.message);
+	if (this.params) {
+		for (var i = 0; i < this.params.length; i++) {
+			s = s.replace('%' + i, this.params[i]);
+		}
+	}
+	return s;
+};
+
+/**
  * The calculator combines the grammar (~syntax) and the parser (parse/format/eval)
  *
  * @member {Map} literals - the map from token to literals accepted in the grammar
@@ -305,13 +337,9 @@ Calculator.prototype.eval = function(tree) {
 };
 
 /** stops the parsing process and reports an error. */
-Calculator.prototype.error = function(message) {
-	// Show formula on console
-	console.log(this.formula);
-	// Show error index in formula with ^
-	console.log(' '.repeat(this.index) + '^');
+Calculator.prototype.error = function(message, params) {
 	// Stop algorithm
-	throw Error(message);
+	throw new CalculatorError(this.formula, this.index, message, params);
 };
 
 /** returns the next token of input or special marker "end" to represent that there are no more input tokens. "next" does not alter the input stream. */
@@ -333,7 +361,7 @@ Calculator.prototype.next = function() {
 			i++;
 		}
 		if (i === this.formula.length)
-			this.error('Un-terminated string starting at position ' + this.index);
+			this.error('Un-terminated string started at position %0', [this.index]);
 		// Found a string
 		return this.formula.substring(this.index, i + 1);
 	}
@@ -382,7 +410,7 @@ Calculator.prototype.expect = function(text) {
 		this.consume(s);
 	else
 		// Error, the next token is unexpected
-		this.error('Found "' + s + '" but expecting "' + text + '"');
+		this.error('Found "%1" but expecting "%2" at position %0', [this.index, s, text]);
 };
 
 /**
@@ -512,7 +540,8 @@ Calculator.prototype.Array = function(type) {
 };
 
 Calculator.prototype.Literal = function(token) {
-	var error = false, tokenLC = token.toLowerCase();
+	var tokenLC = token.toLowerCase();
+
 	function build(value, t) {
 		return {
 			type: 'literal',
@@ -523,7 +552,7 @@ Calculator.prototype.Literal = function(token) {
 
 	// Throw error if the token is a function name
 	if (this.functions.hasOwnProperty(tokenLC) || this.separators.indexOf(tokenLC) >= 0)
-		this.error('Expecting a value but found "' + token + '"');
+		this.error('Expecting a value but found "%1" at position %0', [this.index, token]);
 
 	// Predefined literal like null, false, true, pi, ...
 	if (this.literals.hasOwnProperty(tokenLC))
@@ -547,5 +576,5 @@ Calculator.prototype.Literal = function(token) {
 	if (token.match(/\d+/))
 		return build(parseInt(token));
 	// Unsupported literal
-	this.error('Expecting a value but found "' + token + '"');
+	this.error('Expecting a value but found "%1" at position %0', [this.index, token]);
 };

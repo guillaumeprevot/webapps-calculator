@@ -9,7 +9,11 @@ var languages = {
 		'test, trueValue, falseValue': 'test, valeurVrai, valeurFaux',
 		'convert': 'convertir',
 		'1, \'srcUnit\', \'dstUnit\'': '1, \'de\', \'vers\'',
-		'Money': 'Monétaire'
+		'Money': 'Monétaire',
+		'End of formula has been reached': 'La fin de la formule a été atteinte',
+		'Un-terminated string started at position %0': 'Chaine non terminée commencée à la position %0',
+		'Found "%1" but expecting "%2" at position %0': '"%1" trouvé mais "%2" attendu à la position %0',
+		'Expecting a value but found "%1" at position %0': '"%1" trouvé mais une valeur était attendue à la position %0',
 	},
 	'en': {
 		'&&': 'and',
@@ -352,8 +356,13 @@ $(function() {
 			input.value = (output === null) ? 'null' : (typeof output === 'undefined') ? '' : output.toString();
 			setMessage(val, false);
 		} catch (e) {
-			setMessage(e.message, true);
-			throw e;
+			if (e.console) {
+				e.console();
+				setMessage(e.format(lang), true);
+			} else {
+				console.log(e);
+				setMessage(e.message, true);
+			}
 		}
 	}
 

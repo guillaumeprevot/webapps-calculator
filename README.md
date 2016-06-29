@@ -93,6 +93,9 @@ Ce projet est distribué sous licence MIT, reproduite dans le fichier LICENSE ic
 2016-06-28
 - ajout du fichier LICENCE
 
+2016-06-29
+- amélioration de la gestion des erreurs : traduction des messages et remontée de la position
+
 ## TODO
 
 - support de la notation 2.1e3 pour 2 * 10^3 
