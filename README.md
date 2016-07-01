@@ -93,12 +93,14 @@ Ce projet est distribué sous licence MIT, reproduite dans le fichier LICENSE ic
 2016-06-28
 - ajout du fichier LICENCE
 
-2016-06-29
+2016-06-30
 - amélioration de la gestion des erreurs : traduction des messages et remontée de la position
+- correction d'un bug pour ne pas planter lorsque localStorage n'est pas défini
 
 ## TODO
 
 - support de la notation 2.1e3 pour 2 * 10^3 
+- vérification des paramètres pour les fonctions et les opérateurs
 - syntaxe pour ( ) [ ] , " + dateFormat
 - support des dates (dans Literal)
 - support des variables + ajout des touches (++, --, =) et des opérateurs manquants (+= -= ...)

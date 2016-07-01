@@ -50,32 +50,63 @@ function CalculatorOperator(token, precedence, associativity, calculate) {
 /**
  * A parsing error, providing information about original formula, parsing position and message.
  *
- * @param {String} formula - the formula where error occured
- * @param {Number} index - the position in the formula where error occured
+ * @param {String} formula - the formula where error occurred
+ * @param {Number} index - the position in the formula where error occurred
+ * @param {Number} length - the optional length of the token where error occured
  * @param {String} message - the error message, that may contain parameters %0, %1, ...
  * @param {Array} params - the array of parameters, used to format
  */
-function CalculatorError(formula, index, message, params) {
+function CalculatorError(formula, index, length, message, params) {
 	this.formula = formula;
 	this.index = index;
+	this.length = length || 0;
 	this.message = message;
 	this.params = params;
 }
 
+/** Helper method to write formula to console and highlight the position where error occured */
 CalculatorError.prototype.console = function() {
 	// Show formula on console
 	console.log(this.formula);
 	// Show error index in formula with ^
-	console.log(' '.repeat(this.index) + '^');
+	if ('repeat' in String.prototype) {
+		console.log(' '.repeat(this.index) + '^' + (this.length >= 2 ? ('-'.repeat(this.length - 2) + '^') : ''));
+	} else {
+		var s = '';
+		while (s.length < this.index) s += ' ';
+		console.log(s + '^');
+	}
 };
 
+/** Helper method to hightlight in an editable input or textarea the position where the error occured */
+CalculatorError.prototype.select = function(input) {
+	input.focus();
+	if ('createTextRange' in input) {
+		// IE
+		var range = input.createTextRange();
+		range.collapse(true);
+		range.moveEnd('character', this.index + this.length);
+		range.moveStart('character', this.index);
+		range.select();
+	} else {
+		// Nice browsers
+		input.selectionEnd = this.index + this.length;
+		input.selectionStart = this.index;
+	}
+};
+
+/** Get the formatted error message, with the opportunity to translate with the optional "lang" parameter */
 CalculatorError.prototype.format = function(lang) {
-	var s = lang(this.message);
+	// Call "lang" to allow message translation
+	var s = lang ? lang(this.message) : this.message;
+	// If the message is formatable
 	if (this.params) {
+		// Replace %0 with the first parameter, %1 with the second one, ...
 		for (var i = 0; i < this.params.length; i++) {
 			s = s.replace('%' + i, this.params[i]);
 		}
 	}
+	// Return the formatted message
 	return s;
 };
 
@@ -174,6 +205,7 @@ Calculator.prototype.addDefaultFunctions = function(lang) {
 Calculator.prototype.addOperator = function(token, precedence, associativity, calculate) {
 	// Some tokens may be prefix, postfix and/or binary. For instance : "++" is prefix or postfix and "-" is prefix or binary
 	// To avoid naming conflict, operators are stored internally in three different maps.
+	// var operators = this[associativity + 'Operators'] || this.binaryOperators;
 	var operators = ('prefix' === associativity) ? this.prefixOperators : ('postfix' === associativity) ? this.postfixOperators : this.binaryOperators;
 	operators[token.toLowerCase()] = new CalculatorOperator(token, precedence, associativity, calculate);
 };
@@ -337,9 +369,9 @@ Calculator.prototype.eval = function(tree) {
 };
 
 /** stops the parsing process and reports an error. */
-Calculator.prototype.error = function(message, params) {
+Calculator.prototype.error = function(message, params, tokenLength) {
 	// Stop algorithm
-	throw new CalculatorError(this.formula, this.index, message, params);
+	throw new CalculatorError(this.formula, this.index, tokenLength, message, params);
 };
 
 /** returns the next token of input or special marker "end" to represent that there are no more input tokens. "next" does not alter the input stream. */
@@ -361,7 +393,7 @@ Calculator.prototype.next = function() {
 			i++;
 		}
 		if (i === this.formula.length)
-			this.error('Un-terminated string started at position %0', [this.index]);
+			this.error('Un-terminated string started at position %0', [this.index], i - this.index);
 		// Found a string
 		return this.formula.substring(this.index, i + 1);
 	}
@@ -410,7 +442,7 @@ Calculator.prototype.expect = function(text) {
 		this.consume(s);
 	else
 		// Error, the next token is unexpected
-		this.error('Found "%1" but expecting "%2" at position %0', [this.index, s, text]);
+		this.error('Found "%1" but expecting "%2" at position %0', [this.index, s, text], s.length);
 };
 
 /**
@@ -552,7 +584,7 @@ Calculator.prototype.Literal = function(token) {
 
 	// Throw error if the token is a function name
 	if (this.functions.hasOwnProperty(tokenLC) || this.separators.indexOf(tokenLC) >= 0)
-		this.error('Expecting a value but found "%1" at position %0', [this.index, token]);
+		this.error('Expecting a value but found "%1" at position %0', [this.index, token], token.length);
 
 	// Predefined literal like null, false, true, pi, ...
 	if (this.literals.hasOwnProperty(tokenLC))
@@ -576,5 +608,5 @@ Calculator.prototype.Literal = function(token) {
 	if (token.match(/\d+/))
 		return build(parseInt(token));
 	// Unsupported literal
-	this.error('Expecting a value but found "%1" at position %0', [this.index, token]);
+	this.error('Expecting a value but found "%1" at position %0', [this.index, token], token.length);
 };

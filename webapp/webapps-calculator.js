@@ -358,6 +358,7 @@ $(function() {
 		} catch (e) {
 			if (e.console) {
 				e.console();
+				e.select(input);
 				setMessage(e.format(lang), true);
 			} else {
 				console.log(e);
@@ -514,7 +515,7 @@ $(function() {
 			}));
 		});
 	}
-	getWithCache('https://techgp.fr:9001/utils/money/rates', 'utils-money-rates', 1000 * 60 * 60 * 24, function(data) {
+	(typeof localStorage !== 'undefined') && getWithCache('https://techgp.fr:9001/utils/money/rates', 'utils-money-rates', 1000 * 60 * 60 * 24, function(data) {
 		// console.log(data)
 		Converter.prototype.moneyRates = data;
 	});
