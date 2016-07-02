@@ -97,6 +97,9 @@ Ce projet est distribué sous licence MIT, reproduite dans le fichier LICENSE ic
 - amélioration de la gestion des erreurs : traduction des messages et remontée de la position
 - correction d'un bug pour ne pas planter lorsque localStorage n'est pas défini
 
+2016-07-02
+- laisser à l'utilisateur le choix de l'URL utilisée pour les taux de change
+
 ## TODO
 
 - support de la notation 2.1e3 pour 2 * 10^3 

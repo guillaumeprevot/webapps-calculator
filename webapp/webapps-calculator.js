@@ -485,9 +485,7 @@ $(function() {
 			input.value = $(event.target).text();
 	});
 
-	// Récupérer les taux de change
-	// Taux : http://www.ecb.europa.eu/stats/eurofxref/eurofxref-daily.xml
-	// Noms : http://www.ecb.europa.eu/stats/exchange/eurofxref/html/index.en.html
+	// Charger l'URL "url" donnée et mettre en cache dans localStorage ("cacheKey") pour une durée "cacheExpire"
 	function getWithCache(url, cacheKey, cacheExpire, callback) {
 		try {
 			// Récupérer dans localStorage les données si présentes
@@ -515,9 +513,23 @@ $(function() {
 			}));
 		});
 	}
-	(typeof localStorage !== 'undefined') && getWithCache('https://techgp.fr:9001/utils/money/rates', 'utils-money-rates', 1000 * 60 * 60 * 24, function(data) {
-		// console.log(data)
-		Converter.prototype.moneyRates = data;
-	});
-
+	// Demander l'URL pour les taux puis enregistrer l'URL ou le refus dans localStorage
+	// Taux : http://www.ecb.europa.eu/stats/eurofxref/eurofxref-daily.xml
+	// Noms : http://www.ecb.europa.eu/stats/exchange/eurofxref/html/index.en.html
+	if (typeof localStorage !== 'undefined') {
+		var url = localStorage.getItem('utils-money-rates-url');
+		if (!url) {
+			// Première fois, demander à l'utilisateur
+			url = window.prompt('URL', '');
+			// Sauvegarder l'URL qu'il a donné ou sauvegarder 'disabled' pour ne pas redemander à chaque fois
+			localStorage.setItem('utils-money-rates-url', url || 'disabled');
+		}
+		if (url !== 'disabled') {
+			// URL dispo, charger le contenu au maximum 1 fois par jour
+			getWithCache(url, 'utils-money-rates', 1000 * 60 * 60 * 24, function(data) {
+				// console.log(data)
+				Converter.prototype.moneyRates = data;
+			});
+		}
+	}
 });
