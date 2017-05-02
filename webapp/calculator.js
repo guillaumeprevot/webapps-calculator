@@ -14,15 +14,38 @@ function CalculatorLiteral(token, value) {
 /**
  * A function is a token (its name), followed by arguments separated with a ',' and enclosed between parenthesis. For instance, "min(a, b)" is :
  *
- * Example for "min" function : new CalculatorFunction("min", "a, b", function(context, a, b) { return Math.min(context.eval(a), context.eval(b)); })
+ * Example for "min" function :
+ * new CalculatorFunction("min", "a, b", function(context, a, b) {
+ *   return context.evalAll([a, b]).then(function(params) {
+ *     return Math.min(params[0], params[1]);
+ *   });
+ * })
+ *
+ * Example for "if" function :
+ * new CalculatorFunction("if", "test, yes, no", function(context, test, yes, no) {
+ *   return context.eval(test).then(function(result) {
+ *     return result ? context.eval(yes) : context.eval(no);
+ *   });
+ * })
+ *
+ * Example for an asynchonous calculation function :
+ * new CalculatorFunction("myAsyncFunc", "a, b", function(context, a, b) {
+ *   return context.evalAll([a, b]).then(function(params) {
+ *   	return new Promise(function(resolve, reject) {
+ *        myAsyncFunc(params)
+ *          .done(function(data) { resolve(data); })
+ *          .fail(function(error) { reject(error); });
+ *   	});
+ *   });
+ * })
  *
  * @param {String} token - the token, as seen in formula
- * @param {String} params - an optional description of parameters (not used directly in parser)
- * @param {Function} calculate - the function, used to evaluate the result. First parameter of the fonction is the context, with a "eval" helper method.
+ * @param {String} paramsDescription - an optional description of parameters (not used directly in parser)
+ * @param {Function} calculate - the function, used to evaluate the Promise result. First parameter of the function is the context, with a "eval" or "evalAll" helper methods.
  */
-function CalculatorFunction(token, params, calculate) {
+function CalculatorFunction(token, paramsDescription, calculate, async) {
 	this.token = token;
-	this.params = params;
+	this.paramsDescription = paramsDescription;
 	this.calculate = calculate;
 }
 
@@ -33,12 +56,16 @@ function CalculatorFunction(token, params, calculate) {
  * - - (substract) is usually a binary left-associative operator (i.e. 3-2-1 === (3-2)-1) but is also an unary operator
  * - ** (exponentiation) is a binary right-associative operator (i.e. 2^2^3 === 2^(2^3))
  *
- * Example : new CalculatorOperator("-", 10, 'left', function(context, a, b) { return context.eval(a) - context.eval(b); })
+ * Example : new CalculatorOperator("-", 10, 'left', function(context, a, b) {
+ *   context.evalAll([a, b]).then(function(params) {
+ *     return params[0] - params[1];
+ *   });
+ * })
  * 
  * @param {String} token - the token, as seen in formula
  * @param {Number} precedence - the precedence of the operator (multiplication has greater precedence over addition)
  * @param {String} associativity - how to apply operator (can be "left" or "right" for binary operators and "prefix" or "postfix" for unary operators)
- * @param {Function} calculate - the function, with 3 parameters (context, a, b), with b being absent for unary operators
+ * @param {Function} calculate - the function, used to evaluate the Promise result. They are 3 parameters (context, a, b) with b being absent for unary operators
  */
 function CalculatorOperator(token, precedence, associativity, calculate) {
 	this.token = token;
@@ -165,8 +192,8 @@ Calculator.prototype.addDefaultLiterals = function(lang) {
  *
  * @see CalculatorFunction
  */
-Calculator.prototype.addFunction = function(token, params, calculate) {
-	this.functions[token.toLowerCase()] = new CalculatorFunction(token, params, calculate);
+Calculator.prototype.addFunction = function(token, paramsDescription, calculate) {
+	this.functions[token.toLowerCase()] = new CalculatorFunction(token, paramsDescription, calculate);
 };
 
 /**
@@ -181,20 +208,30 @@ Calculator.prototype.addDefaultFunctions = function(lang) {
 			// Evaluate all "arguments" after "context" and store values in "params"
 			var params = [];
 			for (var i = 1; i < arguments.length; i++) {
-				params.push(context.eval(arguments[i]));
+				params.push(arguments[i]);
 			}
-			// Call Math function with evaluated values
-			return Math[token].apply(Math, params);
+			return context.evalAll(params).then(function(values) {
+				// Call Math function with evaluated values
+				return Math[token].apply(Math, values);
+			});
 		});
 	}
 
 	'random'.split(',').forEach(function(token) { addFromMath(token); });
 	'abs,cos,sin,tan,acos,asin,atan,ceil,floor,round,exp,log,sqrt'.split(',').forEach(function(token) { addFromMath(token, 'x'); });
 	'pow,atan2'.split(',').forEach(function(token) { addFromMath(token, 'x, y'); });
-	'min,max'.split(',').forEach(function(token) { addFromMath(token, 'x, y*'); });
+	'min,max'.split(',').forEach(function(token) { addFromMath(token, 'x1, x2*'); });
 
-	calculator.addFunction(lang('cbrt'), lang('x'), function(context, x) { return (x < 0 ? -1 : 1) * Math.pow(Math.abs(context.eval(x)), 1/3); });
-	calculator.addFunction(lang('if'), lang('test, trueValue, falseValue'), function(context, t, v1, v2) { return context.eval(t) ? context.eval(v1) : context.eval(v2); });
+	calculator.addFunction(lang('cbrt'), lang('x'), function(context, x) {
+		return context.eval(x).then(function(x) {
+			return (x < 0 ? -1 : 1) * Math.pow(Math.abs(x), 1/3);
+		});
+	});
+	calculator.addFunction(lang('if'), lang('test, trueValue, falseValue'), function(context, test, v1, v2) {
+		return context.eval(test).then(function(result) {
+			return result ? context.eval(v1) : context.eval(v2);
+		});
+	});
 };
 
 /**
@@ -223,64 +260,72 @@ Calculator.prototype.addDefaultOperators = function(lang) {
 	function add(token, associativity, calculate) {
 		calculator.addOperator(lang(token), precedence, associativity, calculate);
 	}
-
-	// add('.', 'left', function(context, a, b) { return context.eval(a)[context.eval(b)]; }); // member access
+	function unary(calculate) {
+		return function(context, a) { return context.eval(a).then(function(result) { return calculate(result); }); };
+	}
+	function variable(execute) {
+		return function(context, v) { return execute(v); }
+	}
+	function binary(calculate) {
+		return function(context, a, b) { return context.evalAll([a,b]).then(function(results) { return calculate(results[0], results[1]); }); };
+	}
+	// add('.', 'left', binary(function(a, b) { return a[b]; })); // member access
 	precedence--;
-	add('²', 'postfix', function(context, a) { return Math.pow(context.eval(a), 2); });
-	add('³', 'postfix', function(context, a) { return Math.pow(context.eval(a), 3); });
-	add('++', 'postfix', function(context, variable) { return variable.value++; });
-	add('--', 'postfix', function(context, variable) { return variable.value--; });
-	add('!', 'postfix', function(context, a) { var result = 1; var v = Math.round(context.eval(a)); while (v !== 0) result *= v--; return result; }); // factorielle
+	add('²', 'postfix', unary(function(a) { return Math.pow(a, 2); }));
+	add('³', 'postfix', unary(function(a) { return Math.pow(a, 3); }));
+	add('++', 'postfix', variable(function(v) { return v.value++; }));
+	add('--', 'postfix', variable(function(v) { return v.value--; }));
+	add('!', 'postfix', unary(function(a) { var result = 1; var v = Math.round(a); while (v !== 0) result *= v--; return result; })); // factorielle
 	precedence--;
-	add('√', 'prefix', function(context, a) { return Math.sqrt(context.eval(a)); });
-	add('!', 'prefix', function(context, a) { return !context.eval(a); }); // logical not
-	add('~', 'prefix', function(context, a) { return ~context.eval(a); }); // bitwise not
-	add('+', 'prefix', function(context, a) { return +context.eval(a); });
-	add('-', 'prefix', function(context, a) { return -context.eval(a); });
-	add('++', 'prefix', function(context, variable) { return ++variable.value; });
-	add('--', 'prefix', function(context, variable) { return --variable.value; });
+	add('√', 'prefix', unary(function(a) { return Math.sqrt(a); }));
+	add('!', 'prefix', unary(function(a) { return !a; })); // logical not
+	add('~', 'prefix', unary(function(a) { return ~a; })); // bitwise not
+	add('+', 'prefix', unary(function(a) { return +a; }));
+	add('-', 'prefix', unary(function(a) { return -a; }));
+	add('++', 'prefix', variable(function(v) { return ++v.value; }));
+	add('--', 'prefix', variable(function(v) { return --v.value; }));
 	precedence--;
-	add('**', 'right', function(context, a, b) { return Math.pow(context.eval(a), context.eval(b)); });
-	add('*', 'left', function(context, a, b) { return context.eval(a) * context.eval(b); }); // &#x00D7;
-	add('/', 'left', function(context, a, b) { return context.eval(a) / context.eval(b); }); // &#x00F7;
-	add('%', 'left', function(context, a, b) { return context.eval(a) % context.eval(b); });
+	add('**', 'right', binary(function(a, b) { return Math.pow(a, b); }));
+	add('*', 'left', binary(function(a, b) { return a * b; })); // &#x00D7;
+	add('/', 'left', binary(function(a, b) { return a / b; })); // &#x00F7;
+	add('%', 'left', binary(function(a, b) { return a % b; }));
 	precedence--;
-	add('+', 'left', function(context, a, b) { return context.eval(a) + context.eval(b); }); // number addition and string concatenation
-	add('-', 'left', function(context, a, b) { return context.eval(a) - context.eval(b); });
+	add('+', 'left', binary(function(a, b) { return a + b; })); // number addition and string concatenation
+	add('-', 'left', binary(function(a, b) { return a - b; }));
 	precedence--;
-	add('<<', 'left', function(context, a, b) { return context.eval(a) << context.eval(b); });
-	add('>>', 'left', function(context, a, b) { return context.eval(a) >> context.eval(b); });
-	add('>>>', 'left', function(context, a, b) { return context.eval(a) >>> context.eval(b); });
+	add('<<', 'left', binary(function(a, b) { return a << b; }));
+	add('>>', 'left', binary(function(a, b) { return a >> b; }));
+	add('>>>', 'left', binary(function(a, b) { return a >>> b; }));
 	precedence--;
-	add('<', 'left', function(context, a, b) { return context.eval(a) < context.eval(b); });
-	add('>', 'left', function(context, a, b) { return context.eval(a) > context.eval(b); });
-	add('<=', 'left', function(context, a, b) { return context.eval(a) <= context.eval(b); }); // &#x2264;
-	add('>=', 'left', function(context, a, b) { return context.eval(a) >= context.eval(b); }); // &#x2265;
-	add('in', 'left', function(context, a, b) { return context.eval(b).indexOf(context.eval(a)) >= 0; });
+	add('<', 'left', binary(function(a, b) { return a < b; }));
+	add('>', 'left', binary(function(a, b) { return a > b; }));
+	add('<=', 'left', binary(function(a, b) { return a <= b; })); // &#x2264;
+	add('>=', 'left', binary(function(a, b) { return a >= b; })); // &#x2265;
+	add('in', 'left', binary(function(a, b) { return b.indexOf(a) >= 0; }));
 	// instanceof
 	precedence--;
-	add('===', 'left', function(context, a, b) { return context.eval(a) === context.eval(b); });
-	add('!==', 'left', function(context, a, b) { return context.eval(a) !== context.eval(b); });
-	add('==', 'left', function(context, a, b) { return context.eval(a) == context.eval(b); });
-	add('!=', 'left', function(context, a, b) { return context.eval(a) != context.eval(b); }); // &#x2260;
+	add('===', 'left', binary(function(a, b) { return a === b; }));
+	add('!==', 'left', binary(function(a, b) { return a !== b; }));
+	add('==', 'left', binary(function(a, b) { return a == b; }));
+	add('!=', 'left', binary(function(a, b) { return a != b; })); // &#x2260;
 	precedence--;
-	add('&', 'left', function(context, a, b) { return context.eval(a) & context.eval(b); }); // bitwise AND
+	add('&', 'left', binary(function(a, b) { return a & b; })); // bitwise AND
 	precedence--;
-	add('^', 'left', function(context, a, b) { return context.eval(a) ^ context.eval(b); }); // bitwise XOR
+	add('^', 'left', binary(function(a, b) { return a ^ b; })); // bitwise XOR
 	precedence--;
-	add('|', 'left', function(context, a, b) { return context.eval(a) | context.eval(b); }); // bitwise OR
+	add('|', 'left', binary(function(a, b) { return a | b; })); // bitwise OR
 	precedence--;
-	add('&&', 'left', function(context, a, b) { return context.eval(a) && context.eval(b); });
+	add('&&', 'left', binary(function(a, b) { return a && b; }));
 	precedence--;
-	add('||', 'left', function(context, a, b) { return context.eval(a) || context.eval(b); });
+	add('||', 'left', binary(function(a, b) { return a || b; }));
 	precedence--;
 	// ? :
 	precedence--;
-	add('=', 'right', function(context, variable, b) { return variable.value = context.eval(b); }); // affectation
+	add('=', 'right', function(context, variable, b) { return context.eval(b).then(function(result) { return variable.value = result; }); }); // affectation
 	// += -= **= *= /= %= <<= >>= >>>= &= ^= |=
 	precedence--;
 	// "," is also used to parse function parameters (between "(" and ")") or array elements (between "[" and "]")
-	add(',', 'left', function(context, a, b) { return context.eval(a).concat ? context.eval(a).concat(context.eval(b)) : [context.eval(a), context.eval(b)]; });
+	add(',', 'left', binary(function(a, b) { return a.concat ? a.concat(b) : [a, b]; }));
 };
 
 /**
@@ -342,8 +387,11 @@ Calculator.prototype.format = function(tree) {
  * <code>
  * var formula = "1+  2 ²"
  * var ast = calculator.parse(formula);
- * var value = calculator.eval(ast);
- * console.log(value, typeof value); // 5, number
+ * calculator.eval(ast).then(function(value) {
+ *   console.log(value, typeof value); // 5, number
+ * }, function(error) {
+ *   console.log('Error', error);
+ * });
  * </code>
  *
  * @param {Object} tree - the tree to evaluate
@@ -351,9 +399,9 @@ Calculator.prototype.format = function(tree) {
 Calculator.prototype.eval = function(tree) {
 	switch (tree.type) {
 		case 'literal': // 1, 123.45, true, null, pi, ...
-			return (typeof tree.value !== 'undefined') ? tree.value : this.literals[tree.token].value;
+			return Promise.resolve((typeof tree.value !== 'undefined') ? tree.value : this.literals[tree.token].value);
 		case 'array': // [ params ]
-			return tree.params.map(this.eval.bind(this));
+			return Promise.all(tree.params.map(this.eval.bind(this)));
 		case 'grouping': // ( ... )
 			return this.eval(tree.left);
 		case 'binary': // left token right
@@ -365,7 +413,11 @@ Calculator.prototype.eval = function(tree) {
 		case 'function': // token ( params )
 			return this.functions[tree.token].calculate.apply(null, [this].concat(tree.params));
 	};
-	throw Error('Invalid tree node type ' + tree.type, tree);
+	return Promise.reject(Error('Invalid tree node type ' + tree.type, tree));
+};
+
+Calculator.prototype.evalAll = function(params) {
+	return Promise.all(params.map(this.eval.bind(this)));
 };
 
 /** stops the parsing process and reports an error. */

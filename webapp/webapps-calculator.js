@@ -32,12 +32,12 @@ function lang(text) {
 function Converter() {
 	this.categories = [];
 
-	this.startCategory('Accélération', 'Vitesse_et_acc.C3.A9l.C3.A9ration');
+	this.startCategory('Accélération');
 	this.addUnit('mètre par seconde carrée', 1, 'm/s²');
 	this.addUnit('gravité', 9.80665, 'g');
 	this.addUnit('gal', 0.01, 'Gal', 'galileo');
 
-	this.startCategory('Angle', 'Angle');
+	this.startCategory('Angle');
 	this.addUnit('degré', 1, '°', 'deg', 'degree');
 	this.addUnit('grade', 0.9, 'gr', 'gon', 'gradian'); // 1/100 d'angle droit
 	this.addUnit('radian', 360 / (2 * Math.PI), 'rad');
@@ -49,12 +49,12 @@ function Converter() {
 	this.addUnit('minute angulaire', { d: 60 }, '′'); // ou arcminute ou Minute d'arc
 	this.addUnit('seconde angulaire', { d: 3600 }, '″'); // ou arcseconde ou Seconde d'arc
 
-	this.startCategory('Charge', '.C3.89lectricit.C3.A9');
+	this.startCategory('Charge');
 	this.addUnit('ampère heure', 1000, 'Ah');
 	this.addUnit('milliampère heure', 1, 'mAh');
 	this.addUnit('coulomb', { m: 1000, d: 3600 }, 'C'); // 1 As
 
-	this.startCategory('Energie', '.C3.89nergie');
+	this.startCategory('Energie');
 	this.addUnit('calorie', 4.1868, 'cal'); // calorie
 	this.addUnit('kilocalorie', 4186.8, 'kcal'); // kilocalorie
 	this.addUnit('thermie', 4186800, 'th'); // Mégacalorie
@@ -72,7 +72,7 @@ function Converter() {
 	this.addUnit('Nagasaki', 22000 * 4.184e9, 'Fat Man'); // 21 à 23 000 tonnes TNT
 	this.addUnit('erg', 1e-7, '');
 
-	this.startCategory('Force', 'Force');
+	this.startCategory('Force');
 	this.addUnit('newton', 1, 'N'); // 1 kg.m/s2
 	this.addUnit('dyne', 1e-5, 'dyn');
 	this.addUnit('sthène', 1000, 'sn');
@@ -81,12 +81,12 @@ function Converter() {
 	this.addUnit('ounce-force', 0.2780138509537812, 'ozf'); // 1 oz av × gn
 	this.addUnit('pound-force', 4.4482216152605, 'lbf'); // 1 lb av × gn
 
-	this.startCategory('Intensité lumineuse', 'Lumi.C3.A8re');
+	this.startCategory('Intensité lumineuse');
 	this.addUnit('candela', 0.1, 'cd');
 	this.addUnit('bougie', 1.018, '');
 	this.addUnit('carcel', 9.8, '');
 
-	this.startCategory('Longueur', 'Longueur');
+	this.startCategory('Longueur');
 	this.addUnits(1, 10, 'nm,nanomètre,,,,,μm,micromètre,,,,,mm,millimètre,cm,centimètre,dm,décimètre,m,mètre,dam,décamètre,hm,hectomètre,km,kilomètre,,,,,Mm,mégamètre');
 	this.addUnit('ångström', 0.1, 'Å');
 	this.addUnit('chaîne', 20116800000, ''); // 1000 liens
@@ -116,7 +116,7 @@ function Converter() {
 	this.addUnit('terrain de football', 91440000000, '');  // 100 yard
 	this.addUnit('unité astronomique', 149597870700000000000, 'ua'); // 149597870700 mètres
 
-	this.startCategory('Masse', 'Masse');
+	this.startCategory('Masse');
 	this.addUnits(1, 10, 'mg,milligramme,cg,centigramme,dg,décigramme,g,gramme,dag,décagramme,hg,hectogramme,kg,kilogramme,,,q,quintal,t,tonne');
 	this.addUnit('carat', 200, 'ct');
 	this.addUnit('livre', 453592.37, 'lb');
@@ -138,7 +138,7 @@ function Converter() {
 	this.addUnit('masse solaire', 1.9884e36, ''); // 1.98855e30 kg sur wikipedia EN mais 1.9884e30 kg sur wikipedia FR
 	this.addUnit('masse atomique', 1.660538921e-21, 'u', 'dalton', 'uma', 'Da'); // 1.660539040e−27 kg sur wikipedia EN mais 1.660538921e-27 kg sur wikipedia FR
 
-	this.startCategory('Pression', 'Pression');
+	this.startCategory('Pression');
 	this.addUnit('pascal', 1, 'Pa'); // 1 N/m²
 	this.addUnit('barye', 0.1, 'ba'); // 1 dyn/cm2
 	this.addUnit('bar', 100000, 'bar');
@@ -147,7 +147,7 @@ function Converter() {
 	this.addUnit('atmosphère technique', 98066, 'at', 'technical atmosphere');
 	this.addUnit('livre par pied carré', 47.9, 'psf', 'pound per square foot'); // 1 lb av × gn / 1 sq ft
 
-	this.startCategory('Puissance', 'Puissance');
+	this.startCategory('Puissance');
 	this.addUnit('watt', 1, 'W'); // = 1 J/s = 1 kg.m2.s-3
 	this.addUnit('joule par seconde', 1, 'J.s-1');
 	this.addUnit('newton-mètre par seconde', 1, 'N.m.s-1');
@@ -158,7 +158,7 @@ function Converter() {
 	this.addUnit('térawatt', 1e12, 'TW');
 	this.addUnit('erg par seconde', 1e-7, ''); // 1 g.cm2.s-3
 
-	this.startCategory('Surface', 'Superficie');
+	this.startCategory('Surface');
 	this.addUnit('millimètre carré', 0.000001, 'mm²');
 	this.addUnit('centimètre carré', 0.0001, 'cm²');
 	this.addUnit('décimètre carré', 0.01, 'dm²');
@@ -175,14 +175,14 @@ function Converter() {
 	this.addUnit('pouce carré', { m: 0.09290304, d: 12*12}, 'in²'); // 1 pouce = 1/12 de pied
 	this.addUnit('acre', 4046.856422, '');
 
-	this.startCategory('Température', 'Temp.C3.A9rature');
+	this.startCategory('Température');
 	this.addUnit('Celsius', { m: 1.8, o: 491.57 }, '°C');
 	this.addUnit('Fahrenheit', { m: 1, o: 459.57 }, '°F');
 	this.addUnit('Rankine', 1, 'R', '°Ra');
 	this.addUnit('kelvin', 1.8, 'K');
 	this.addUnit('Réaumur', { m: 2.25, o: 491.67 }, 'r', '°Ré');
 
-	this.startCategory('Temps', 'Temps');
+	this.startCategory('Temps');
 	this.addUnit('nanoseconde', 1e-9, 'ns');
 	this.addUnit('microseconde', 1e-6, 'μs');
 	this.addUnit('milliseconde', 1e-3, 'ms');
@@ -200,13 +200,13 @@ function Converter() {
 	this.addUnit('millénaire', 31556926080, '');
 	this.addUnit('Plank', 5.39106e-44, 'tP'); // 5.39106e-44 s
 
-	this.startCategory('Vitesse', 'Vitesse_et_acc.C3.A9l.C3.A9ration');
+	this.startCategory('Vitesse');
 	this.addUnit('mètre par seconde', 1, 'm/s');
 	this.addUnit('kilomètre par heure', { m: 1000, d: 3600 }, 'km/h');
 	this.addUnit('noeud', { m: 1852, d: 3600 }, 'nd'); // 1 M marin/h soit 1.852 km/h
 	this.addUnit('mach', 340, 'Ma'); // soit 1 224 km.h-1
 
-	this.startCategory('Volume', 'Volume_-_capacit.C3.A9');
+	this.startCategory('Volume');
 	this.addUnits(1, 1000, 'mm3,millimètre cube,cm3,centimètre cube,dm3,décimètre cube,m3,mètre cube');
 	this.addUnits(1000, 10, 'ml,millilitre,cl,centilitre,dl,décilitre,l,litre,,,hl,hectolitre');
 	this.addUnit('gallon américain', 3785411.784, '');
@@ -229,34 +229,17 @@ function Converter() {
 	this.addUnit('minim américaine', 61.61152, '');
 	this.addUnit('tablespoon', 14786.76478, 'tbs');
 	this.addUnit('teaspoon', 4928.921594, 'tsp');
-
-	this.startCategory('Money');
-	this.addUnit('euro', 1, '€');
-	if (this.moneyRates) {
-		for (var currency in this.moneyRates) {
-			var symbol = (currency === 'USD') ? '$' : (currency === 'GBP') ? '£' : ''; 
-			this.addUnit(currency, 1 / this.moneyRates[currency], symbol);
-		}
-	}
-
 }
 
 Converter.prototype.convert = function(value, srcUnit, dstUnit) {
-	if (typeof value === 'string') {
-		var candidates = this.findCandidates(value);
-		if (candidates.length > 0) {
-			window.open('https://fr.wikipedia.org/wiki/Conversion_des_unit%C3%A9s' + '#' + candidates[0].category.anchor);
-			throw Error('');
-		} else {
-			throw Error('Use convert(unit) or convert(quantity, srcUnit, dstUnit)');
-		}
-	}
 	var candidates1 = this.findCandidates(srcUnit);
 	if (candidates1.length === 0)
 		throw Error('Unrecognized unit ' + srcUnit);
+
 	var candidates2 = this.findCandidates(dstUnit);
 	if (candidates2.length === 0)
 		throw Error('Unrecognized unit ' + dstUnit);
+
 	for (var i1 = 0; i1 < candidates1.length; i1++) {
 		for (var i2 = 0; i2 < candidates2.length; i2++) {
 			if (candidates1[i1].category === candidates2[i2].category) {
@@ -286,10 +269,8 @@ Converter.prototype.findCandidates = function(name) {
 	return candidates;
 };
 
-Converter.prototype.startCategory = function(name, anchor) {
+Converter.prototype.startCategory = function(name) {
 	this.category = { name: lang(name), units: [] };
-	if (anchor)
-		this.category.anchor = anchor;
 	this.categories.push(this.category);
 };
 
@@ -315,6 +296,21 @@ Converter.prototype.addUnits = function(startValue, multiplier, units) {
 	}
 };
 
+Converter.prototype.addMoneyCategory = function() {
+	// Demander l'URL pour les taux puis enregistrer l'URL ou le refus dans localStorage
+	// - Taux : http://www.ecb.europa.eu/stats/eurofxref/eurofxref-daily.xml
+	// - Noms : http://www.ecb.europa.eu/stats/exchange/eurofxref/html/index.en.html
+	var self = this;
+	return getWithCache('URL', 'utils-money-rates', 'utils-money-rates-url', 1000 * 60 * 60 * 24).then(function(moneyRates) {
+		self.startCategory('Money');
+		self.addUnit('euro', 1, '€');
+		for (var currency in moneyRates) {
+			var symbol = (currency === 'USD') ? '$' : (currency === 'GBP') ? '£' : ''; 
+			self.addUnit(currency, 1 / moneyRates[currency], symbol);
+		}
+	});
+};
+
 Converter.prototype.apply = function(value, conversion, invert) {
 	var multiplier = 1, divider = 1, offset = 0;
 	if (typeof conversion === 'number')
@@ -327,6 +323,52 @@ Converter.prototype.apply = function(value, conversion, invert) {
 	return value * multiplier / divider + offset;
 };
 
+function getWithCache(prompt, cacheKey, cacheUrlKey, cacheExpire) {
+	return new Promise(function(resolve, reject) {
+		// Vérifier le support de localStorage
+		if (typeof localStorage === 'undefined') {
+			resolve(null);
+			return;
+		}
+		// Récupérer dans localStorage les données, si présentes
+		var cache = localStorage.getItem(cacheKey);
+		if (cache) {
+			// value est de la forme { time: ms, data: data, url: url }
+			cache = JSON.parse(cache);
+			// Si le cache n'est pas trop vieux, on l'utilise
+			if (cache.time && (new Date().getTime() - cache.time) < cacheExpire) {
+				resolve(cache.data);
+				return;
+			}
+		}
+		// Récupérer dans localStorage l'URL où chercher les données à jour, si présentes
+		var cacheUrl = localStorage.getItem(cacheUrlKey);
+		if (!cacheUrl) {
+			// Première fois, demander à l'utilisateur
+			cacheUrl = window.prompt(prompt, '') || 'disabled';
+			// Sauvegarder l'URL qu'il a donné ou sauvegarder 'disabled' pour ne pas redemander à chaque fois
+			localStorage.setItem(cacheUrlKey, cacheUrl);
+		}
+		// Si l'utilisateur n'a pas fourni d'URL, on le redemande pas à chaque fois
+		if (cacheUrl === 'disabled') {
+			resolve(null);
+			return;
+		}
+		// Mettre à jour le cache s'il est vide ou obsolète
+		$.get(cacheUrl).done(function(data) {
+			// console.log(data)
+			resolve(data);
+			// On met à jour le cache
+			localStorage.setItem(cacheKey, JSON.stringify({
+				time: new Date().getTime(),
+				data: data
+			}));
+		}).fail(function(error) {
+			reject(error);
+		});
+	});
+}
+
 $(function() {
 	var input = document.getElementById('calculator-content'),
 		calculator = new Calculator();
@@ -335,7 +377,12 @@ $(function() {
 	calculator.addDefaultOperators(lang);
 
 	calculator.addFunction(lang('convert'), lang('1, "srcUnit", "dstUnit"'), function(context, n, u1, u2) {
-		return new Converter().convert(context.eval(n), context.eval(u1), context.eval(u2));
+		return context.evalAll([n, u1, u2]).then(function(values) {
+			var converter = new Converter();
+			return converter.addMoneyCategory().then(function() {
+				return converter.convert(values[0], values[1], values[2]);
+			});
+		});
 	});
 
 	// Traduire si demandé le texte des boutons
@@ -346,15 +393,19 @@ $(function() {
 	});
 
 	function calculate() {
-		var val, tree, output;
+		var val, tree;
 		try {
 			val = input.value;
 			tree = calculator.parse(val);
 			//console.log(calculator.format(tree), tree);
-			output = calculator.eval(tree);
-			// console.log(output);
-			input.value = (output === null) ? 'null' : (typeof output === 'undefined') ? '' : output.toString();
-			setMessage(val, false);
+			calculator.eval(tree).then(function(output) {
+				// console.log(output);
+				input.value = (output === null) ? 'null' : (typeof output === 'undefined') ? '' : output.toString();
+				setMessage(val, false);
+			}, function(reason) {
+				console.log(reason);
+				setMessage(reason, true);
+			})
 		} catch (e) {
 			if (e.console) {
 				e.console();
@@ -393,7 +444,7 @@ $(function() {
 		var button = $(event.target),
 			name = button.attr('data-function') || button.text(),
 			f = calculator.functions[name];
-		insert(name + '(' + f.params + ')');
+		insert(name + '(' + f.paramsDescription + ')');
 	});
 
 	/* Le bouton qui effectue le calcul */
@@ -485,51 +536,4 @@ $(function() {
 			input.value = $(event.target).text();
 	});
 
-	// Charger l'URL "url" donnée et mettre en cache dans localStorage ("cacheKey") pour une durée "cacheExpire"
-	function getWithCache(url, cacheKey, cacheExpire, callback) {
-		try {
-			// Récupérer dans localStorage les données si présentes
-			var value = localStorage.getItem(cacheKey);
-			if (value) {
-				// value est de la forme { time: ms, data: data }
-				value = JSON.parse(value);
-				// Si le cache n'est pas trop vieux, on l'utilise
-				if (value.time && (new Date().getTime() - value.time) < 1000 * 60 * 60 * 24) {
-					callback(value.data);
-					return;
-				}
-			}
-		} catch (e) {
-			//
-		}
-		// Si le cache est vide, ou trop vieux, on obsolète (=exception), on récupère des donées à jour
-		$.get(url, function(data) {
-			// On traite les données
-			callback(data);
-			// On met à jour le cache
-			localStorage.setItem(cacheKey, JSON.stringify({
-				time: new Date().getTime(),
-				data: data
-			}));
-		});
-	}
-	// Demander l'URL pour les taux puis enregistrer l'URL ou le refus dans localStorage
-	// Taux : http://www.ecb.europa.eu/stats/eurofxref/eurofxref-daily.xml
-	// Noms : http://www.ecb.europa.eu/stats/exchange/eurofxref/html/index.en.html
-	if (typeof localStorage !== 'undefined') {
-		var url = localStorage.getItem('utils-money-rates-url');
-		if (!url) {
-			// Première fois, demander à l'utilisateur
-			url = window.prompt('URL', '');
-			// Sauvegarder l'URL qu'il a donné ou sauvegarder 'disabled' pour ne pas redemander à chaque fois
-			localStorage.setItem('utils-money-rates-url', url || 'disabled');
-		}
-		if (url !== 'disabled') {
-			// URL dispo, charger le contenu au maximum 1 fois par jour
-			getWithCache(url, 'utils-money-rates', 1000 * 60 * 60 * 24, function(data) {
-				// console.log(data)
-				Converter.prototype.moneyRates = data;
-			});
-		}
-	}
 });

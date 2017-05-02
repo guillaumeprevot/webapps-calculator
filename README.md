@@ -100,6 +100,11 @@ Ce projet est distribué sous licence MIT, reproduite dans le fichier LICENSE ic
 2016-07-02
 - laisser à l'utilisateur le choix de l'URL utilisée pour les taux de change
 
+2017-05-01
+- utilisation de Promise pour les calculs afin de permettre l'intégration de fonctions asynchrones, comme par exemple pour la conversion monétaire
+- réorganisation du code pour la fonction de conversion, notamment pour la partie concernant les conversions monétaires
+- suppression des liens vers Wikipédia (fonction obscure et en plus en vers Wikipedia FR uniquement)
+
 ## TODO
 
 - support de la notation 2.1e3 pour 2 * 10^3 
