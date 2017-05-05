@@ -105,6 +105,12 @@ Ce projet est distribué sous licence MIT, reproduite dans le fichier LICENSE ic
 - réorganisation du code pour la fonction de conversion, notamment pour la partie concernant les conversions monétaires
 - suppression des liens vers Wikipédia (fonction obscure et en plus en vers Wikipedia FR uniquement)
 
+2017-05-04
+- ajout du support des dates et/ou des heures (nécessite "moment.js")
+- refactoring de l'interprétation des litéraux (suite à l'ajout des dates/heures)
+- correction de la gestion des paramètres optionnels "undefined" dans "eval" et "evalAll"
+- correction de la traduction des opérateurs car ce sont des mots réservés de la syntaxe
+
 ## TODO
 
 - support de la notation 2.1e3 pour 2 * 10^3 

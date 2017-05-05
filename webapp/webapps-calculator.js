@@ -1,8 +1,5 @@
 var languages = {
 	'fr': {
-		'in': 'dans',
-		'&&': 'et',
-		'||': 'ou',
 		'sqrt': 'racine',
 		'pow': 'puissance',
 		'if': 'si',
@@ -16,8 +13,6 @@ var languages = {
 		'Expecting a value but found "%1" at position %0': '"%1" trouvé mais une valeur était attendue à la position %0',
 	},
 	'en': {
-		'&&': 'and',
-		'||': 'or',
 		'convert': 'conv',
 		'random': 'rand',
 	}

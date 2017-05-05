@@ -301,7 +301,7 @@ Calculator.prototype.addDefaultOperators = function(lang) {
 	add('>', 'left', binary(function(a, b) { return a > b; }));
 	add('<=', 'left', binary(function(a, b) { return a <= b; })); // &#x2264;
 	add('>=', 'left', binary(function(a, b) { return a >= b; })); // &#x2265;
-	add('in', 'left', binary(function(a, b) { return b.indexOf(a) >= 0; }));
+	add('∈', 'left', binary(function(a, b) { return b.indexOf(a) >= 0; }));
 	// instanceof
 	precedence--;
 	add('===', 'left', binary(function(a, b) { return a === b; }));
@@ -397,6 +397,8 @@ Calculator.prototype.format = function(tree) {
  * @param {Object} tree - the tree to evaluate
  */
 Calculator.prototype.eval = function(tree) {
+	if (typeof tree === 'undefined')
+		return Promise.resolve(undefined);
 	switch (tree.type) {
 		case 'literal': // 1, 123.45, true, null, pi, ...
 			return Promise.resolve((typeof tree.value !== 'undefined') ? tree.value : this.literals[tree.token].value);
@@ -417,7 +419,12 @@ Calculator.prototype.eval = function(tree) {
 };
 
 Calculator.prototype.evalAll = function(params) {
-	return Promise.all(params.map(this.eval.bind(this)));
+	// La ligne suivante ne fonctionne pas car elle zappe les "undefined"
+	// return Promise.all(params.map(tihs.eval.bind(this))); 
+	// Du coup, on s'assure de passer sur tous les éléments 
+	return Promise.all(params.map(function(param) {
+		return this.eval(param);
+	}.bind(this)));
 };
 
 /** stops the parsing process and reports an error. */
@@ -625,14 +632,34 @@ Calculator.prototype.Array = function(type) {
 
 Calculator.prototype.Literal = function(token) {
 	var tokenLC = token.toLowerCase();
+	var literals = [];
 
-	function build(value, t) {
-		return {
-			type: 'literal',
-			token: t || token,
-			value: value
-		};
+	function addLiteralForRegExp(expression, transform) {
+		literals.push(function(token) { if (expression.test(token)) return transform(token); });
 	}
+	function addLiteralForDateTime(format) {
+		literals.push(function(token) { var m = moment.utc(token, format, true/*strict*/); if (m.isValid()) return m; });
+	}
+	if (typeof moment !== 'undefined') {
+		// date/time support
+		addLiteralForDateTime('"YYYY/MM/DD HH:mm"');
+		// date support
+		addLiteralForDateTime('"YYYY/MM/DD"');
+		// time support
+		addLiteralForDateTime('"HH:mm"');
+	}
+	// string support
+	literals.push(function(token) { if (token.length >= 2 && token[0] === '"' && token[token.length - 1] === '"') return token.substring(1, token.length - 1).replace('\\"', '"'); });
+	// integer in hexadecimal format support
+	addLiteralForRegExp(/0x[0-9a-fA-F]+/, function(token) { return parseInt(token.substring(2), 16); });
+	// integer in octal format support
+	addLiteralForRegExp(/0o[0-7]+/, function(token) { return parseInt(token.substring(2), 8); });
+	// integer in binary format support
+	addLiteralForRegExp(/0b[0-1]+/, function(token) { return parseInt(token.substring(2), 2); });
+	// float in decimal format support
+	addLiteralForRegExp(/\d+\.\d+/, function(token) { return parseFloat(token); });
+	// integer in decimal format support
+	addLiteralForRegExp(/\d+/, function(token) { return parseInt(token); });
 
 	// Throw error if the token is a function name
 	if (this.functions.hasOwnProperty(tokenLC) || this.separators.indexOf(tokenLC) >= 0)
@@ -640,25 +667,15 @@ Calculator.prototype.Literal = function(token) {
 
 	// Predefined literal like null, false, true, pi, ...
 	if (this.literals.hasOwnProperty(tokenLC))
-		return build(undefined, tokenLC);
-	// string support
-	if (token.length >= 2 && token[0] === '"' && token[token.length - 1] === '"')
-		return build(token.substring(1, token.length - 1).replace('\\"', '"'));
-	// integer in hexadecimal format support
-	if (token.match(/0x[0-9a-fA-F]+/))
-		return build(parseInt(token.substring(2), 16));
-	// integer in octal format support
-	if (token.match(/0o[0-7]+/))
-		return build(parseInt(token.substring(2), 8));
-	// integer in binary format support
-	if (token.match(/0b[0-1]+/))
-		return build(parseInt(token.substring(2), 2));
-	// float in decimal format support
-	if (token.match(/\d+\.\d+/))
-		return build(parseFloat(token));
-	// integer in decimal format support
-	if (token.match(/\d+/))
-		return build(parseInt(token));
+		return { type: 'literal', token: tokenLC };
+
+	// Literal constructions
+	for (var i = 0; i < literals.length; i++) {
+		var value = literals[i](token);
+		if (value !== undefined)
+			return { type: 'literal', token: token, value: value };
+	}
+
 	// Unsupported literal
 	this.error('Expecting a value but found "%1" at position %0', [this.index, token], token.length);
 };
