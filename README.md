@@ -111,12 +111,17 @@ Ce projet est distribué sous licence MIT, reproduite dans le fichier LICENSE ic
 - correction de la gestion des paramètres optionnels "undefined" dans "eval" et "evalAll"
 - correction de la traduction des opérateurs car ce sont des mots réservés de la syntaxe
 
+2017-05-06
+- ajout du support des tableaux vides
+- ajout du support des fonctions sans paramètres 
+- correction de la mise en cache cassée suite à l'ajout de "moment"
+
 ## TODO
 
+- passer en ServiceWorker pour la gestion du cache plutôt que AppCache
 - support de la notation 2.1e3 pour 2 * 10^3 
 - vérification des paramètres pour les fonctions et les opérateurs
 - syntaxe pour ( ) [ ] , " + dateFormat
-- support des dates (dans Literal)
 - support des variables + ajout des touches (++, --, =) et des opérateurs manquants (+= -= ...)
 - ajout de +ror, +rol (operator décallage de bit avec rotation), présents dans la calculette windows
 - saisie des angles en radian/degré/grade

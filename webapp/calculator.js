@@ -578,16 +578,14 @@ Calculator.prototype.Primary = function() {
 	} else if ('[' === token) {
 		// If token is a '[' : consume it, get a multiple expressions array and we should find the closing ']'
 		this.consume(token);
-		var t = this.Array('array');
-		this.expect(']');
+		var t = this.Array('array', ']');
 		return t;
 	} else if (this.functions.hasOwnProperty(token.toLowerCase())) {
 		// If the token is a function's name : consume it and get parameters between '(' and ')'
 		var f = this.functions[token.toLowerCase()];
 		this.consume(token);
 		this.expect('(');
-		var t = this.Array('function');
-		this.expect(')');
+		var t = this.Array('function', ')');
 		t.token = token.toLowerCase();
 		return t;
 	} else {
@@ -609,9 +607,16 @@ Calculator.prototype.Primary = function() {
 	}
 };
 
-Calculator.prototype.Array = function(type) {
+Calculator.prototype.Array = function(type, lastToken) {
+	// Check for empty array or function without parameter
+	var token = this.next();
+	if (token === lastToken) {
+		this.consume(token);
+		return { type: type, params: [] };
+	}
 	// array (true, 1, 2) will be represented in t as binary(binary(literal(true), literal(1)), literal(2))
 	var t = this.Exp(0);
+	this.expect(lastToken);
 	// params will flatten the array into [literal(true), literal(1), literal(2)]
 	var params = [];
 	function add(tree) {
