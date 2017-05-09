@@ -15,33 +15,31 @@ function CalculatorLiteral(token, value) {
  * A function is a token (its name), followed by arguments separated with a ',' and enclosed between parenthesis. For instance, "min(a, b)" is :
  *
  * Example for "min" function :
- * new CalculatorFunction("min", "a, b", function(context, a, b) {
- *   return context.evalAll([a, b]).then(function(params) {
- *     return Math.min(params[0], params[1]);
- *   });
+ * new CalculatorFunction("min", "a, b", function(context, resolve, reject, a, b) {
+ *   context.evalAll([a, b], function(params) {
+ *     resolve(Math.min(params[0], params[1]));
+ *   }, reject);
  * })
  *
  * Example for "if" function :
- * new CalculatorFunction("if", "test, yes, no", function(context, test, yes, no) {
- *   return context.eval(test).then(function(result) {
- *     return result ? context.eval(yes) : context.eval(no);
- *   });
+ * new CalculatorFunction("if", "test, yes, no", function(context, resolve, reject, test, yes, no) {
+ *   context.eval(test, function(result) {
+ *     context.eval(result ? yes : no, resolve, reject);
+ *   }, reject);
  * })
  *
  * Example for an asynchonous calculation function :
- * new CalculatorFunction("myAsyncFunc", "a, b", function(context, a, b) {
- *   return context.evalAll([a, b]).then(function(params) {
- *   	return new Promise(function(resolve, reject) {
- *        myAsyncFunc(params)
- *          .done(function(data) { resolve(data); })
- *          .fail(function(error) { reject(error); });
- *   	});
- *   });
+ * new CalculatorFunction("myAsyncFunc", "a, b", function(context, resolve, reject, a, b) {
+ *   context.evalAll([a, b], function(params) {
+ *   	myAsyncFunc(params)
+ *        .done(function(data) { resolve(data); })
+ *        .fail(function(error) { reject(error); });
+ *   }, reject);
  * })
  *
  * @param {String} token - the token, as seen in formula
  * @param {String} params - an optional description of parameters (not used directly in parser)
- * @param {Function} calculate - the function, used to evaluate the Promise result. First parameter of the function is the context, with a "eval" or "evalAll" helper methods.
+ * @param {Function} calculate - the function, used to evaluate the result, with signature calculate(context, resolve, reject, params... )
  */
 function CalculatorFunction(token, params, calculate) {
 	this.token = token;
@@ -56,16 +54,24 @@ function CalculatorFunction(token, params, calculate) {
  * - - (substract) is usually a binary left-associative operator (i.e. 3-2-1 === (3-2)-1) but is also an unary operator
  * - ** (exponentiation) is a binary right-associative operator (i.e. 2^2^3 === 2^(2^3))
  *
- * Example : new CalculatorOperator("-", 10, 'left', function(context, a, b) {
- *   context.evalAll([a, b]).then(function(params) {
- *     return params[0] - params[1];
- *   });
+ * Example for the substraction binay operator :
+ * new CalculatorOperator("-", 11, 'left', function(context, resolve, reject, a, b) {
+ *   context.evalAll([a, b], function(params) {
+ *     resolve(params[0] - params[1]);
+ *   }, reject);
+ * })
+ * 
+ * Example for the ² postfix operator :
+ * new CalculatorOperator("-", 14, 'postfix', function(context, resolve, reject, a) {
+ *   context.eval(a, function(result) {
+ *     resolve(Math.pow(result, 2));
+ *   }, reject);
  * })
  * 
  * @param {String} token - the token, as seen in formula
  * @param {Number} precedence - the precedence of the operator (multiplication has greater precedence over addition)
  * @param {String} associativity - how to apply operator (can be "left" or "right" for binary operators and "prefix" or "postfix" for unary operators)
- * @param {Function} calculate - the function, used to evaluate the Promise result. They are 3 parameters (context, a, b) with b being absent for unary operators
+ * @param {Function} calculate - the function, used to evaluate the result, with signatrure calculate(context, resolve, reject, a[, b])
  */
 function CalculatorOperator(token, precedence, associativity, calculate) {
 	this.token = token;
@@ -145,6 +151,9 @@ CalculatorError.prototype.format = function(lang) {
  * @member {Map} prefixOperators - the map from operator's token to prefix operator accepted in the grammar
  * @member {Map} postfixOperators - the map from operator's token to postfix operator accepted in the grammar
  * @member {Map} binaryOperators - the map from operator's token to binary operator accepted in the grammar
+ * @member {String} dateFormat - the "moment" format to support date literals
+ * @member {String} timeFormat - the "moment" format to support time literals
+ * @member {String} datetimeFormat - the "moment" format to support datetime literals
  *
  * @member {String} formula - the formula to parse
  * @member {Number} index - the current position during parsing, from 0 to formula.length
@@ -155,7 +164,11 @@ function Calculator() {
 	this.functions = {};
 	this.prefixOperators = {};
 	this.postfixOperators = {};
-	this.binaryOperators = {};	
+	this.binaryOperators = {};
+	this.dateFormat = '"YYYY/MM/DD"';
+	this.timeFormat = '"HH:mm"';
+	this.datetimeFormat = '"YYYY/MM/DD HH:mm"';
+
 	this.formula = undefined;
 	this.index = undefined;
 	this.separators = undefined;
@@ -204,16 +217,16 @@ Calculator.prototype.addFunction = function(token, params, calculate) {
 Calculator.prototype.addDefaultFunctions = function(lang) {
 	var calculator = this;
 	function addFromMath(token, params) {
-		calculator.addFunction(lang(token), params || '', function(context) {
+		calculator.addFunction(lang(token), params || '', function(context, resolve, reject) {
 			// Evaluate all "arguments" after "context" and store values in "params"
 			var params = [];
-			for (var i = 1; i < arguments.length; i++) {
+			for (var i = 3; i < arguments.length; i++) {
 				params.push(arguments[i]);
 			}
-			return context.evalAll(params).then(function(values) {
+			context.evalAll(params, function(values) {
 				// Call Math function with evaluated values
-				return Math[token].apply(Math, values);
-			});
+				resolve(Math[token].apply(Math, values));
+			}, reject);
 		});
 	}
 
@@ -222,15 +235,15 @@ Calculator.prototype.addDefaultFunctions = function(lang) {
 	'pow,atan2'.split(',').forEach(function(token) { addFromMath(token, 'x, y'); });
 	'min,max'.split(',').forEach(function(token) { addFromMath(token, 'x1, x2*'); });
 
-	calculator.addFunction(lang('cbrt'), lang('x'), function(context, x) {
-		return context.eval(x).then(function(x) {
-			return (x < 0 ? -1 : 1) * Math.pow(Math.abs(x), 1/3);
-		});
+	calculator.addFunction(lang('cbrt'), lang('x'), function(context, resolve, reject, x) {
+		context.eval(x, function(x) {
+			resolve((x < 0 ? -1 : 1) * Math.pow(Math.abs(x), 1/3));
+		}, reject);
 	});
-	calculator.addFunction(lang('if'), lang('test, trueValue, falseValue'), function(context, test, v1, v2) {
-		return context.eval(test).then(function(result) {
-			return result ? context.eval(v1) : context.eval(v2);
-		});
+	calculator.addFunction(lang('if'), lang('test, trueValue, falseValue'), function(context, resolve, reject, test, v1, v2) {
+		context.eval(test, function(result) {
+			context.eval(result ? v1 : v2, resolve, reject);
+		}, reject);
 	});
 };
 
@@ -260,26 +273,45 @@ Calculator.prototype.addDefaultOperators = function(lang) {
 		calculator.addOperator(lang(token), precedence, associativity, calculate);
 	}
 	function unary(calculate) {
-		return function(context, a) { return context.eval(a).then(function(result) { return calculate(result); }); };
+		return function(context, resolve, reject, a) { context.eval(a, function(result) { resolve(calculate(result)); }, reject); };
 	}
 	function variable(execute) {
-		return function(context, v) { return execute(v); }
+		return function(context, resolve, reject, v) { resolve(execute(v)); }
 	}
 	function binary(calculate) {
-		return function(context, a, b) { return context.evalAll([a,b]).then(function(results) { return calculate(results[0], results[1]); }); };
+		return function(context, resolve, reject, a, b) { context.evalAll([a, b], function(results) { resolve(calculate(results[0], results[1])); }, reject); };
 	}
 	var precedence = 0;
 	// "," is also used to parse function parameters (between "(" and ")") or array elements (between "[" and "]")
 	add(',', 'left', binary(function(a, b) { return a.concat ? a.concat(b) : [a, b]; }));
 	precedence++;
-	add('=', 'right', function(context, variable, b) { return context.eval(b).then(function(result) { return variable.value = result; }); }); // affectation
+	add('=', 'right', function(context, resolve, reject, variable, b) {
+		context.eval(b, function(result) {
+			variable.value = result;
+			resolve(result);
+		}, reject);
+	}); // affectation
 	// += -= **= *= /= %= <<= >>= >>>= &= ^= |=
 	precedence++;
 	// ? :
 	precedence++;
-	add('||', 'left', binary(function(a, b) { return a || b; }));
+	add('||', 'left', function(context, resolve, reject, a, b) {
+		context.eval(a, function(a) {
+			if (a)
+				resolve(true);
+			else
+				context.eval(b, resolve, reject);
+		}, reject)
+	});
 	precedence++;
-	add('&&', 'left', binary(function(a, b) { return a && b; }));
+	add('&&', 'left', function(context, resolve, reject, a, b) {
+		context.eval(a, function(a) {
+			if (!a)
+				resolve(false);
+			else
+				context.eval(b, resolve, reject);
+		}, reject)
+	});
 	precedence++;
 	add('|', 'left', binary(function(a, b) { return a | b; })); // bitwise OR
 	precedence++;
@@ -387,7 +419,7 @@ Calculator.prototype.format = function(tree) {
  * <code>
  * var formula = "1+  2 ²"
  * var ast = calculator.parse(formula);
- * calculator.eval(ast).then(function(value) {
+ * calculator.eval(ast, function(value) {
  *   console.log(value, typeof value); // 5, number
  * }, function(error) {
  *   console.log('Error', error);
@@ -396,35 +428,53 @@ Calculator.prototype.format = function(tree) {
  *
  * @param {Object} tree - the tree to evaluate
  */
-Calculator.prototype.eval = function(tree) {
-	if (typeof tree === 'undefined')
-		return Promise.resolve(undefined);
+Calculator.prototype.eval = function(tree, resolve, reject) {
+	if (typeof tree === 'undefined') {
+		resolve(undefined);
+		return;
+	}
 	switch (tree.type) {
 		case 'literal': // 1, 123.45, true, null, pi, ...
-			return Promise.resolve((typeof tree.value !== 'undefined') ? tree.value : this.literals[tree.token].value);
+			resolve((typeof tree.value !== 'undefined') ? tree.value : this.literals[tree.token].value);
+			break;
 		case 'array': // [ params ]
-			return Promise.all(tree.params.map(this.eval.bind(this)));
+			this.evalAll(tree.params, resolve, reject);
+			break;
 		case 'grouping': // ( ... )
-			return this.eval(tree.left);
+			this.eval(tree.left, resolve, reject);
+			break;
 		case 'binary': // left token right
-			return this.binaryOperators[tree.token].calculate(this, tree.left, tree.right);
+			this.binaryOperators[tree.token].calculate(this, resolve, reject, tree.left, tree.right);
+			break;
 		case 'prefix': // token right
-			return this.prefixOperators[tree.token].calculate(this, tree.right);
+			this.prefixOperators[tree.token].calculate(this, resolve, reject, tree.right);
+			break;
 		case 'postfix': // left token
-			return this.postfixOperators[tree.token].calculate(this, tree.left);
+			this.postfixOperators[tree.token].calculate(this, resolve, reject, tree.left);
+			break;
 		case 'function': // token ( params )
-			return this.functions[tree.token].calculate.apply(null, [this].concat(tree.params));
+			this.functions[tree.token].calculate.apply(null, [this, resolve, reject].concat(tree.params));
+			break;
+		default:
+			reject(new Error('Invalid tree node type ' + tree.type, tree));
 	};
-	return Promise.reject(Error('Invalid tree node type ' + tree.type, tree));
 };
 
-Calculator.prototype.evalAll = function(params) {
-	// La ligne suivante ne fonctionne pas car elle zappe les "undefined"
-	// return Promise.all(params.map(tihs.eval.bind(this))); 
-	// Du coup, on s'assure de passer sur tous les éléments 
-	return Promise.all(params.map(function(param) {
-		return this.eval(param);
-	}.bind(this)));
+Calculator.prototype.evalAll = function(params, resolve, reject) {
+	var count = params.length;
+	var values = [];
+	values.length = count;
+	params.forEach(function(param, index) {
+		this.eval(param, function(value) {
+			values[index] = value;
+			if (count === 1) // si c'est le dernier
+				resolve(values); // on a fini
+			count--; // on décrémente après
+		}, function(error) {
+			count = 0; // pour être sûr de ne pas appeler "resolve" ensuite
+			reject(error);
+		});
+	}.bind(this));
 };
 
 /** stops the parsing process and reports an error. */
@@ -647,11 +697,11 @@ Calculator.prototype.Literal = function(token) {
 	}
 	if (typeof moment !== 'undefined') {
 		// date/time support
-		addLiteralForDateTime('"YYYY/MM/DD HH:mm"');
+		addLiteralForDateTime(this.datetimeFormat);
 		// date support
-		addLiteralForDateTime('"YYYY/MM/DD"');
+		addLiteralForDateTime(this.dateFormat);
 		// time support
-		addLiteralForDateTime('"HH:mm"');
+		addLiteralForDateTime(this.timeFormat);
 	}
 	// string support
 	literals.push(function(token) { if (token.length >= 2 && token[0] === '"' && token[token.length - 1] === '"') return token.substring(1, token.length - 1).replace('\\"', '"'); });

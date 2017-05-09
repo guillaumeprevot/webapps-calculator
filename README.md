@@ -121,12 +121,18 @@ Ce projet est distribué sous licence MIT, reproduite dans le fichier LICENSE ic
 - inversion de la déclaration des opérateurs dans "addDefaultOperators" pour éviter la valeur de "precedence" en dur
 - correction de typo
 
+2017-05-09
+- suppression des Promise (introduites le 01/05) au profit de callback pour les 2 raisons suivantes :
+1. les Promise ne sont pas supportées par IE
+2. les Promise ne sont pas synchrones, même si tout le contenu de la formule est synchrone
+- personnalisation possible des formats de dates et heures de Calculator via "dateFormat", "timeFormat" et "datetimeFormat"
+- optimisation des opérateurs && et || pour s'arrêter dès que possible (un "false" pour && ou un "true" pour ||)
+
 ## TODO
 
 - passer en ServiceWorker pour la gestion du cache plutôt que AppCache
 - support de la notation 2.1e3 pour 2 * 10^3 
 - vérification des paramètres pour les fonctions et les opérateurs
-- syntaxe pour ( ) [ ] , " + dateFormat
 - support des variables + ajout des touches (++, --, =) et des opérateurs manquants (+= -= ...)
 - ajout de +ror, +rol (operator décallage de bit avec rotation), présents dans la calculette windows
 - saisie des angles en radian/degré/grade

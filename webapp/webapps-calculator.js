@@ -291,19 +291,20 @@ Converter.prototype.addUnits = function(startValue, multiplier, units) {
 	}
 };
 
-Converter.prototype.addMoneyCategory = function() {
+Converter.prototype.addMoneyCategory = function(resolve, reject) {
 	// Demander l'URL pour les taux puis enregistrer l'URL ou le refus dans localStorage
 	// - Taux : http://www.ecb.europa.eu/stats/eurofxref/eurofxref-daily.xml
 	// - Noms : http://www.ecb.europa.eu/stats/exchange/eurofxref/html/index.en.html
 	var self = this;
-	return getWithCache('URL', 'utils-money-rates', 'utils-money-rates-url', 1000 * 60 * 60 * 24).then(function(moneyRates) {
+	getWithCache('URL', 'utils-money-rates', 'utils-money-rates-url', 1000 * 60 * 60 * 24, function(moneyRates) {
 		self.startCategory('Money');
 		self.addUnit('euro', 1, '€');
 		for (var currency in moneyRates) {
 			var symbol = (currency === 'USD') ? '$' : (currency === 'GBP') ? '£' : ''; 
 			self.addUnit(currency, 1 / moneyRates[currency], symbol);
 		}
-	});
+		resolve();
+	}, reject);
 };
 
 Converter.prototype.apply = function(value, conversion, invert) {
@@ -318,49 +319,47 @@ Converter.prototype.apply = function(value, conversion, invert) {
 	return value * multiplier / divider + offset;
 };
 
-function getWithCache(prompt, cacheKey, cacheUrlKey, cacheExpire) {
-	return new Promise(function(resolve, reject) {
-		// Vérifier le support de localStorage
-		if (typeof localStorage === 'undefined') {
-			resolve(null);
+function getWithCache(prompt, cacheKey, cacheUrlKey, cacheExpire, resolve, reject) {
+	// Vérifier le support de localStorage
+	if (typeof localStorage === 'undefined') {
+		resolve(null);
+		return;
+	}
+	// Récupérer dans localStorage les données, si présentes
+	var cache = localStorage.getItem(cacheKey);
+	if (cache) {
+		// value est de la forme { time: ms, data: data, url: url }
+		cache = JSON.parse(cache);
+		// Si le cache n'est pas trop vieux, on l'utilise
+		if (cache.time && (new Date().getTime() - cache.time) < cacheExpire) {
+			resolve(cache.data);
 			return;
 		}
-		// Récupérer dans localStorage les données, si présentes
-		var cache = localStorage.getItem(cacheKey);
-		if (cache) {
-			// value est de la forme { time: ms, data: data, url: url }
-			cache = JSON.parse(cache);
-			// Si le cache n'est pas trop vieux, on l'utilise
-			if (cache.time && (new Date().getTime() - cache.time) < cacheExpire) {
-				resolve(cache.data);
-				return;
-			}
-		}
-		// Récupérer dans localStorage l'URL où chercher les données à jour, si présentes
-		var cacheUrl = localStorage.getItem(cacheUrlKey);
-		if (!cacheUrl) {
-			// Première fois, demander à l'utilisateur
-			cacheUrl = window.prompt(prompt, '') || 'disabled';
-			// Sauvegarder l'URL qu'il a donné ou sauvegarder 'disabled' pour ne pas redemander à chaque fois
-			localStorage.setItem(cacheUrlKey, cacheUrl);
-		}
-		// Si l'utilisateur n'a pas fourni d'URL, on le redemande pas à chaque fois
-		if (cacheUrl === 'disabled') {
-			resolve(null);
-			return;
-		}
-		// Mettre à jour le cache s'il est vide ou obsolète
-		$.get(cacheUrl).done(function(data) {
-			// console.log(data)
-			resolve(data);
-			// On met à jour le cache
-			localStorage.setItem(cacheKey, JSON.stringify({
-				time: new Date().getTime(),
-				data: data
-			}));
-		}).fail(function(error) {
-			reject(error);
-		});
+	}
+	// Récupérer dans localStorage l'URL où chercher les données à jour, si présentes
+	var cacheUrl = localStorage.getItem(cacheUrlKey);
+	if (!cacheUrl) {
+		// Première fois, demander à l'utilisateur
+		cacheUrl = window.prompt(prompt, '') || 'disabled';
+		// Sauvegarder l'URL qu'il a donné ou sauvegarder 'disabled' pour ne pas redemander à chaque fois
+		localStorage.setItem(cacheUrlKey, cacheUrl);
+	}
+	// Si l'utilisateur n'a pas fourni d'URL, on le redemande pas à chaque fois
+	if (cacheUrl === 'disabled') {
+		resolve(null);
+		return;
+	}
+	// Mettre à jour le cache s'il est vide ou obsolète
+	$.get(cacheUrl).done(function(data) {
+		// console.log(data)
+		resolve(data);
+		// On met à jour le cache
+		localStorage.setItem(cacheKey, JSON.stringify({
+			time: new Date().getTime(),
+			data: data
+		}));
+	}).fail(function(error) {
+		reject(error);
 	});
 }
 
@@ -371,13 +370,13 @@ $(function() {
 	calculator.addDefaultFunctions(lang);
 	calculator.addDefaultOperators(lang);
 
-	calculator.addFunction(lang('convert'), lang('1, "srcUnit", "dstUnit"'), function(context, n, u1, u2) {
-		return context.evalAll([n, u1, u2]).then(function(values) {
+	calculator.addFunction(lang('convert'), lang('1, "srcUnit", "dstUnit"'), function(context, resolve, reject, n, u1, u2) {
+		context.evalAll([n, u1, u2], function(values) {
 			var converter = new Converter();
-			return converter.addMoneyCategory().then(function() {
-				return converter.convert(values[0], values[1], values[2]);
-			});
-		});
+			converter.addMoneyCategory(function() {
+				resolve(converter.convert(values[0], values[1], values[2]));
+			}, reject);
+		}, reject);
 	});
 
 	// Traduire si demandé le texte des boutons
@@ -393,14 +392,14 @@ $(function() {
 			val = input.value;
 			tree = calculator.parse(val);
 			//console.log(calculator.format(tree), tree);
-			calculator.eval(tree).then(function(output) {
+			calculator.eval(tree, function(output) {
 				// console.log(output);
 				input.value = (output === null) ? 'null' : (typeof output === 'undefined') ? '' : output.toString();
 				setMessage(val, false);
 			}, function(reason) {
 				console.log(reason);
 				setMessage(reason, true);
-			})
+			});
 		} catch (e) {
 			if (e.console) {
 				e.console();
