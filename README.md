@@ -117,6 +117,10 @@ Ce projet est distribué sous licence MIT, reproduite dans le fichier LICENSE ic
 - correction de la mise en cache cassée suite à l'ajout de "moment"
 - mise à jour des screenshots
 
+2017-05-08
+- inversion de la déclaration des opérateurs dans "addDefaultOperators" pour éviter la valeur de "precedence" en dur
+- correction de typo
+
 ## TODO
 
 - passer en ServiceWorker pour la gestion du cache plutôt que AppCache

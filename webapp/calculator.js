@@ -256,7 +256,6 @@ Calculator.prototype.addDefaultOperators = function(lang) {
 	// Javascript : https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Operator_Precedence
 	// Java : https://docs.oracle.com/javase/tutorial/java/nutsandbolts/operators.html
 	var calculator = this;
-	var precedence = 15;
 	function add(token, associativity, calculate) {
 		calculator.addOperator(lang(token), precedence, associativity, calculate);
 	}
@@ -269,14 +268,49 @@ Calculator.prototype.addDefaultOperators = function(lang) {
 	function binary(calculate) {
 		return function(context, a, b) { return context.evalAll([a,b]).then(function(results) { return calculate(results[0], results[1]); }); };
 	}
-	// add('.', 'left', binary(function(a, b) { return a[b]; })); // member access
-	precedence--;
-	add('²', 'postfix', unary(function(a) { return Math.pow(a, 2); }));
-	add('³', 'postfix', unary(function(a) { return Math.pow(a, 3); }));
-	add('++', 'postfix', variable(function(v) { return v.value++; }));
-	add('--', 'postfix', variable(function(v) { return v.value--; }));
-	add('!', 'postfix', unary(function(a) { var result = 1; var v = Math.round(a); while (v !== 0) result *= v--; return result; })); // factorielle
-	precedence--;
+	var precedence = 0;
+	// "," is also used to parse function parameters (between "(" and ")") or array elements (between "[" and "]")
+	add(',', 'left', binary(function(a, b) { return a.concat ? a.concat(b) : [a, b]; }));
+	precedence++;
+	add('=', 'right', function(context, variable, b) { return context.eval(b).then(function(result) { return variable.value = result; }); }); // affectation
+	// += -= **= *= /= %= <<= >>= >>>= &= ^= |=
+	precedence++;
+	// ? :
+	precedence++;
+	add('||', 'left', binary(function(a, b) { return a || b; }));
+	precedence++;
+	add('&&', 'left', binary(function(a, b) { return a && b; }));
+	precedence++;
+	add('|', 'left', binary(function(a, b) { return a | b; })); // bitwise OR
+	precedence++;
+	add('^', 'left', binary(function(a, b) { return a ^ b; })); // bitwise XOR
+	precedence++;
+	add('&', 'left', binary(function(a, b) { return a & b; })); // bitwise AND
+	precedence++;
+	add('===', 'left', binary(function(a, b) { return a === b; }));
+	add('!==', 'left', binary(function(a, b) { return a !== b; }));
+	add('==', 'left', binary(function(a, b) { return a == b; }));
+	add('!=', 'left', binary(function(a, b) { return a != b; })); // &#x2260;
+	precedence++;
+	add('<', 'left', binary(function(a, b) { return a < b; }));
+	add('>', 'left', binary(function(a, b) { return a > b; }));
+	add('<=', 'left', binary(function(a, b) { return a <= b; })); // &#x2264;
+	add('>=', 'left', binary(function(a, b) { return a >= b; })); // &#x2265;
+	add('∈', 'left', binary(function(a, b) { return b.indexOf(a) >= 0; }));
+	// instanceof
+	precedence++;
+	add('<<', 'left', binary(function(a, b) { return a << b; }));
+	add('>>', 'left', binary(function(a, b) { return a >> b; }));
+	add('>>>', 'left', binary(function(a, b) { return a >>> b; }));
+	precedence++;
+	add('+', 'left', binary(function(a, b) { return a + b; })); // number addition and string concatenation
+	add('-', 'left', binary(function(a, b) { return a - b; }));
+	precedence++;
+	add('**', 'right', binary(function(a, b) { return Math.pow(a, b); }));
+	add('*', 'left', binary(function(a, b) { return a * b; })); // &#x00D7;
+	add('/', 'left', binary(function(a, b) { return a / b; })); // &#x00F7;
+	add('%', 'left', binary(function(a, b) { return a % b; }));
+	precedence++;
 	add('√', 'prefix', unary(function(a) { return Math.sqrt(a); }));
 	add('!', 'prefix', unary(function(a) { return !a; })); // logical not
 	add('~', 'prefix', unary(function(a) { return ~a; })); // bitwise not
@@ -284,48 +318,14 @@ Calculator.prototype.addDefaultOperators = function(lang) {
 	add('-', 'prefix', unary(function(a) { return -a; }));
 	add('++', 'prefix', variable(function(v) { return ++v.value; }));
 	add('--', 'prefix', variable(function(v) { return --v.value; }));
-	precedence--;
-	add('**', 'right', binary(function(a, b) { return Math.pow(a, b); }));
-	add('*', 'left', binary(function(a, b) { return a * b; })); // &#x00D7;
-	add('/', 'left', binary(function(a, b) { return a / b; })); // &#x00F7;
-	add('%', 'left', binary(function(a, b) { return a % b; }));
-	precedence--;
-	add('+', 'left', binary(function(a, b) { return a + b; })); // number addition and string concatenation
-	add('-', 'left', binary(function(a, b) { return a - b; }));
-	precedence--;
-	add('<<', 'left', binary(function(a, b) { return a << b; }));
-	add('>>', 'left', binary(function(a, b) { return a >> b; }));
-	add('>>>', 'left', binary(function(a, b) { return a >>> b; }));
-	precedence--;
-	add('<', 'left', binary(function(a, b) { return a < b; }));
-	add('>', 'left', binary(function(a, b) { return a > b; }));
-	add('<=', 'left', binary(function(a, b) { return a <= b; })); // &#x2264;
-	add('>=', 'left', binary(function(a, b) { return a >= b; })); // &#x2265;
-	add('∈', 'left', binary(function(a, b) { return b.indexOf(a) >= 0; }));
-	// instanceof
-	precedence--;
-	add('===', 'left', binary(function(a, b) { return a === b; }));
-	add('!==', 'left', binary(function(a, b) { return a !== b; }));
-	add('==', 'left', binary(function(a, b) { return a == b; }));
-	add('!=', 'left', binary(function(a, b) { return a != b; })); // &#x2260;
-	precedence--;
-	add('&', 'left', binary(function(a, b) { return a & b; })); // bitwise AND
-	precedence--;
-	add('^', 'left', binary(function(a, b) { return a ^ b; })); // bitwise XOR
-	precedence--;
-	add('|', 'left', binary(function(a, b) { return a | b; })); // bitwise OR
-	precedence--;
-	add('&&', 'left', binary(function(a, b) { return a && b; }));
-	precedence--;
-	add('||', 'left', binary(function(a, b) { return a || b; }));
-	precedence--;
-	// ? :
-	precedence--;
-	add('=', 'right', function(context, variable, b) { return context.eval(b).then(function(result) { return variable.value = result; }); }); // affectation
-	// += -= **= *= /= %= <<= >>= >>>= &= ^= |=
-	precedence--;
-	// "," is also used to parse function parameters (between "(" and ")") or array elements (between "[" and "]")
-	add(',', 'left', binary(function(a, b) { return a.concat ? a.concat(b) : [a, b]; }));
+	precedence++;
+	add('²', 'postfix', unary(function(a) { return Math.pow(a, 2); }));
+	add('³', 'postfix', unary(function(a) { return Math.pow(a, 3); }));
+	add('++', 'postfix', variable(function(v) { return v.value++; }));
+	add('--', 'postfix', variable(function(v) { return v.value--; }));
+	add('!', 'postfix', unary(function(a) { var result = 1; var v = Math.round(a); while (v !== 0) result *= v--; return result; })); // factorielle
+	precedence++;
+	// add('.', 'left', binary(function(a, b) { return a[b]; })); // member access
 };
 
 /**
