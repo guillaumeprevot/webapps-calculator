@@ -439,7 +439,7 @@ $(function() {
 		var button = $(event.target),
 			name = button.attr('data-function') || button.text(),
 			f = calculator.functions[name];
-		insert(name + '(' + f.paramsDescription + ')');
+		insert(name + '(' + f.params + ')');
 	});
 
 	/* Le bouton qui effectue le calcul */

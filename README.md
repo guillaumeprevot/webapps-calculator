@@ -103,7 +103,7 @@ Ce projet est distribué sous licence MIT, reproduite dans le fichier LICENSE ic
 2017-05-01
 - utilisation de Promise pour les calculs afin de permettre l'intégration de fonctions asynchrones, comme par exemple pour la conversion monétaire
 - réorganisation du code pour la fonction de conversion, notamment pour la partie concernant les conversions monétaires
-- suppression des liens vers Wikipédia (fonction obscure et en plus en vers Wikipedia FR uniquement)
+- suppression des liens vers Wikipédia (fonction obscure et en plus vers Wikipedia FR uniquement)
 
 2017-05-04
 - ajout du support des dates et/ou des heures (nécessite "moment.js")
@@ -113,8 +113,9 @@ Ce projet est distribué sous licence MIT, reproduite dans le fichier LICENSE ic
 
 2017-05-06
 - ajout du support des tableaux vides
-- ajout du support des fonctions sans paramètres 
+- ajout du support des fonctions sans paramètre
 - correction de la mise en cache cassée suite à l'ajout de "moment"
+- mise à jour des screenshots
 
 ## TODO
 

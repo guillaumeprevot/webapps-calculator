@@ -40,12 +40,12 @@ function CalculatorLiteral(token, value) {
  * })
  *
  * @param {String} token - the token, as seen in formula
- * @param {String} paramsDescription - an optional description of parameters (not used directly in parser)
+ * @param {String} params - an optional description of parameters (not used directly in parser)
  * @param {Function} calculate - the function, used to evaluate the Promise result. First parameter of the function is the context, with a "eval" or "evalAll" helper methods.
  */
-function CalculatorFunction(token, paramsDescription, calculate, async) {
+function CalculatorFunction(token, params, calculate) {
 	this.token = token;
-	this.paramsDescription = paramsDescription;
+	this.params = params;
 	this.calculate = calculate;
 }
 
@@ -192,8 +192,8 @@ Calculator.prototype.addDefaultLiterals = function(lang) {
  *
  * @see CalculatorFunction
  */
-Calculator.prototype.addFunction = function(token, paramsDescription, calculate) {
-	this.functions[token.toLowerCase()] = new CalculatorFunction(token, paramsDescription, calculate);
+Calculator.prototype.addFunction = function(token, params, calculate) {
+	this.functions[token.toLowerCase()] = new CalculatorFunction(token, params, calculate);
 };
 
 /**
