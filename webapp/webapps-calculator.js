@@ -451,6 +451,14 @@ $(function() {
 			calculate();
 	});
 
+	$(document.body).on('keyup', function(event) {
+		if (event.keyCode === 38) {
+			var s = input.value;
+			input.value = $('#calculator-message').text();
+			$('#calculator-message').text(s);
+		}
+	});
+	
 	/* Le bouton qui ouvre/ferme la partie à droite */
 	$('#calculator-keyboard .help').click(function() {
 		$('body').toggleClass('help');
@@ -522,6 +530,16 @@ $(function() {
 			if (c >= '0' && c <= '9')
 				insert('.');
 		}
+	});
+
+	/* Le bouton d'enregistrement en mémoire (MemoryStore) */
+	$('#calculator-help .ms').click(function() {
+		input.value = 'mem = (' + input.value + ')'
+	});
+
+	/* Le bouton de lecture de la mémoire (MemoryRead) */
+	$('#calculator-help .mr').click(function() {
+		insert('mem');
 	});
 
 	/* En tappant sur la dernière formule, on la recharge dans la zone d'édition */

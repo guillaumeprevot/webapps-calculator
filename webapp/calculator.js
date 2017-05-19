@@ -1,14 +1,31 @@
 /**
  * A literal is a token, associated with a value (for instance : "true", "false", "null", "pi", "e"... ").
  *
- * Example for "true" literal : new CalculatorLiteral('true', true)
+ * Example for "true" literal :
+ * new CalculatorLiteral('true', true);
+ * 
+ * Example for a variable called "v" :
+ * var v = 0;
+ * new CalculatorLiteral('v',
+ *    function() { return v; },
+ *    function(newValue) { v = newValue; }
+ * );
  *
  * @param {String} token - the token, as seen in formula
- * @param {*} value - the corresponding value, used to evaluate the result
+ * @param {*} value - the corresponding value (or the getter for a variable), used to evaluate the result
  */
-function CalculatorLiteral(token, value) {
+function CalculatorLiteral(token, value, setter) {
 	this.token = token;
-	this.value = value;
+	if (typeof value === 'function') {
+		Object.defineProperty(this, 'value', {
+			get: value, // the getter
+			set: setter, // the setter
+			enumerable: true, // visible in "for ... in ..." and Object.keys()
+			configurable: false // can not change and be deleted with "delete"
+		});
+	} else {
+		this.value = value;
+	}
 }
 
 /**
@@ -175,12 +192,16 @@ function Calculator() {
 }
 
 /**
- * Helper method to add a literal from a token and a value.
+ * Helper method to add a literal from a token and a value. If "value" is
+ * a function, the literal is created with a "value" Javascript property,
+ * accessed with "value" function as a getter and "setter" fucntion (is
+ * provided) as a setter. 
  *
+ * Exemple:
  * @see CalculatorLiteral
  */
-Calculator.prototype.addLiteral = function(token, value) {
-	this.literals[token.toLowerCase()] = new CalculatorLiteral(token, value);
+Calculator.prototype.addLiteral = function(token, value, setter) {
+	this.literals[token.toLowerCase()] = new CalculatorLiteral(token, value, setter);
 };
 
 /**
@@ -190,14 +211,17 @@ Calculator.prototype.addLiteral = function(token, value) {
  */
 Calculator.prototype.addDefaultLiterals = function(lang) {
 	var calculator = this;
-	function add(token, value) {
-		calculator.addLiteral(lang(token), value);	
+	function add(token, value, setter) {
+		calculator.addLiteral(lang(token), value, setter);	
 	};
 	add('true', true);
 	add('false', false);
 	add('null', null);
 	add('pi', Math.PI);
 	add('e', Math.E);
+	// The "mem" literal
+	var mem = null;
+	add('mem', function() { return mem; }, function(newValue) { mem = newValue; });
 };
 
 /**
@@ -276,7 +300,7 @@ Calculator.prototype.addDefaultOperators = function(lang) {
 		return function(context, resolve, reject, a) { context.eval(a, function(result) { resolve(calculate(result)); }, reject); };
 	}
 	function variable(execute) {
-		return function(context, resolve, reject, v) { resolve(execute(v)); }
+		return function(context, resolve, reject, v) { resolve(execute(v.literal)); }
 	}
 	function binary(calculate) {
 		return function(context, resolve, reject, a, b) { context.evalAll([a, b], function(results) { resolve(calculate(results[0], results[1])); }, reject); };
@@ -287,7 +311,7 @@ Calculator.prototype.addDefaultOperators = function(lang) {
 	precedence++;
 	add('=', 'right', function(context, resolve, reject, variable, b) {
 		context.eval(b, function(result) {
-			variable.value = result;
+			variable.literal.value = result;
 			resolve(result);
 		}, reject);
 	}); // affectation
@@ -396,7 +420,7 @@ Calculator.prototype.parse = function(formula) {
 Calculator.prototype.format = function(tree) {
 	switch (tree.type) {
 		case 'literal': // 1, 123.45, true, null, pi, ...
-			return tree.token || tree.value;
+			return tree.token;
 		case 'array': // [ params ]
 			return '[' + tree.params.map(this.format.bind(this)).join(', ') + ']';
 		case 'grouping': // ( left )
@@ -435,7 +459,7 @@ Calculator.prototype.eval = function(tree, resolve, reject) {
 	}
 	switch (tree.type) {
 		case 'literal': // 1, 123.45, true, null, pi, ...
-			resolve((typeof tree.value !== 'undefined') ? tree.value : this.literals[tree.token].value);
+			resolve((typeof tree.value !== 'undefined') ? tree.value : tree.literal.value);
 			break;
 		case 'array': // [ params ]
 			this.evalAll(tree.params, resolve, reject);
@@ -722,7 +746,7 @@ Calculator.prototype.Literal = function(token) {
 
 	// Predefined literal like null, false, true, pi, ...
 	if (this.literals.hasOwnProperty(tokenLC))
-		return { type: 'literal', token: tokenLC };
+		return { type: 'literal', token: token, literal: this.literals[tokenLC] };
 
 	// Literal constructions
 	for (var i = 0; i < literals.length; i++) {

@@ -128,12 +128,17 @@ Ce projet est distribué sous licence MIT, reproduite dans le fichier LICENSE ic
 - personnalisation possible des formats de dates et heures de Calculator via "dateFormat", "timeFormat" et "datetimeFormat"
 - optimisation des opérateurs && et || pour s'arrêter dès que possible (un "false" pour && ou un "true" pour ||)
 
+2017-05-19
+- ajout du support des variables (en fait des litéraux donc "value" est accessible via getter / setter au lieu d'une valeur fixe)
+- ajout d'une variable "mem" pour conserver (via "MS") ou récupérer (via "MR") une valeur en mémoire dans la calculatrice
+- correction des opérateurs "=" (affectation), "++" et "--" (postfix ou prefix) qui manipulent des variables
+- support de la flêche vers le haut pour éditer la formule précédemment calculée
+
 ## TODO
 
 - passer en ServiceWorker pour la gestion du cache plutôt que AppCache
 - support de la notation 2.1e3 pour 2 * 10^3 
 - vérification des paramètres pour les fonctions et les opérateurs
-- support des variables + ajout des touches (++, --, =) et des opérateurs manquants (+= -= ...)
 - ajout de +ror, +rol (operator décallage de bit avec rotation), présents dans la calculette windows
 - saisie des angles en radian/degré/grade
 - recherche ?
