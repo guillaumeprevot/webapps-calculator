@@ -13,6 +13,7 @@
  *
  * @param {String} token - the token, as seen in formula
  * @param {*} value - the corresponding value (or the getter for a variable), used to evaluate the result
+ * @param {Function} setter - the setter, if provided, for a variable called "token"
  */
 function CalculatorLiteral(token, value, setter) {
 	this.token = token;
@@ -192,12 +193,8 @@ function Calculator() {
 }
 
 /**
- * Helper method to add a literal from a token and a value. If "value" is
- * a function, the literal is created with a "value" Javascript property,
- * accessed with "value" function as a getter and "setter" fucntion (is
- * provided) as a setter. 
+ * Helper method to add a literal from a token and a value (either constant or variable).
  *
- * Exemple:
  * @see CalculatorLiteral
  */
 Calculator.prototype.addLiteral = function(token, value, setter) {
