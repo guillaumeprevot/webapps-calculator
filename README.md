@@ -10,7 +10,8 @@ Les liens suivants ont été utiles pour cette application :
 
 - [Parsing Expressions by Recursive Descent](http://www.engr.mun.ca/~theo/Misc/exp_parsing.htm), un formidable article qui propose une méthode simple à implémenter pour créer un parseur... et qui a mené à l'écriture du parseur utilisé ici.
 - [jsep](http://jsep.from.so/), pour JavaScript Expression Parser, sous licence MIT, qui été utilisé jusqu'au 22/05/2016 pour l'analyse des formules. L'API comme le code sont simples à comprendre.
-- [jQuery 2.2.4](http://jquery.com/) sous licence MIT
+- [jQuery 3.2.1](http://jquery.com/) sous licence MIT
+- [moment.js 2.18.1](http://momentjs.com/) sous licence MIT
 - [ECB](http://www.ecb.europa.eu/stats/exchange/eurofxref/html/index.en.html) qui utilisé dans le convertisseur monétaire pour obtenir des taux de change quotidien
 
 L'application peut être utilisée en mode déconnecté après une première utilisation. Le fichier manifest `webapps-calculator.appcache` décrit comme doit se faire la mise en cache. Plus d'info chez Mozilla [en français](https://developer.mozilla.org/fr/docs/Utiliser_Application_Cache) ou [en anglais](https://developer.mozilla.org/en-US/docs/Web/HTML/Using_the_application_cache).
@@ -133,6 +134,9 @@ Ce projet est distribué sous licence MIT, reproduite dans le fichier LICENSE ic
 - ajout d'une variable "mem" pour conserver (via "MS") ou récupérer (via "MR") une valeur en mémoire dans la calculatrice
 - correction des opérateurs "=" (affectation), "++" et "--" (postfix ou prefix) qui manipulent des variables
 - support de la flêche vers le haut pour éditer la formule précédemment calculée
+
+2017-05-21
+- mise à jour de jQuery (2.2.4 en 3.2.1) et moment.js (2.15.0 en 2.18.1)
 
 ## TODO
 
