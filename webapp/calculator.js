@@ -196,9 +196,19 @@ function Calculator() {
  * Helper method to add a literal from a token and a value (either constant or variable).
  *
  * @see CalculatorLiteral
+ * @see Calculator.prototype.addLiteralEntry
  */
 Calculator.prototype.addLiteral = function(token, value, setter) {
-	this.literals[token.toLowerCase()] = new CalculatorLiteral(token, value, setter);
+	this.addLiteralEntry(new CalculatorLiteral(token, value, setter));
+};
+
+/**
+ * Helper method to add a literal object (either constant or variable).
+ *
+ * @see CalculatorLiteral
+ */
+Calculator.prototype.addLiteralEntry = function(entry) {
+	this.literals[entry.token.toLowerCase()] = entry;
 };
 
 /**
@@ -225,9 +235,19 @@ Calculator.prototype.addDefaultLiterals = function(lang) {
  * Helper method to add a function from a token, a description of parameters and a function used for evaluation.
  *
  * @see CalculatorFunction
+ * @see Calculator.prototype.addFunctionEntry
  */
 Calculator.prototype.addFunction = function(token, params, calculate) {
-	this.functions[token.toLowerCase()] = new CalculatorFunction(token, params, calculate);
+	this.addFunctionEntry(new CalculatorFunction(token, params, calculate));
+};
+
+/**
+ * Helper method to add a function object.
+ *
+ * @see CalculatorFunction
+ */
+Calculator.prototype.addFunctionEntry = function(entry) {
+	this.functions[entry.token.toLowerCase()] = entry;
 };
 
 /**
@@ -269,16 +289,26 @@ Calculator.prototype.addDefaultFunctions = function(lang) {
 };
 
 /**
- * Helper method to add -in the appropriate map- an operator from a token, a precedence, an associativity and a function used for evaluation.
+ * Helper method to add an operator from a token, a precedence, an associativity and a function used for evaluation.
+ *
+ * @see CalculatorOperator
+ * @see Calculator.prototype.addOperatorEntry
+ */
+Calculator.prototype.addOperator = function(token, precedence, associativity, calculate) {
+	this.addOperatorEntry(new CalculatorOperator(token, precedence, associativity, calculate));
+};
+
+/**
+ * Helper method to add -in the appropriate map- an operator object.
  *
  * @see CalculatorOperator
  */
-Calculator.prototype.addOperator = function(token, precedence, associativity, calculate) {
+Calculator.prototype.addOperatorEntry = function(entry) {
 	// Some tokens may be prefix, postfix and/or binary. For instance : "++" is prefix or postfix and "-" is prefix or binary
 	// To avoid naming conflict, operators are stored internally in three different maps.
 	// var operators = this[associativity + 'Operators'] || this.binaryOperators;
-	var operators = ('prefix' === associativity) ? this.prefixOperators : ('postfix' === associativity) ? this.postfixOperators : this.binaryOperators;
-	operators[token.toLowerCase()] = new CalculatorOperator(token, precedence, associativity, calculate);
+	var operators = ('prefix' === entry.associativity) ? this.prefixOperators : ('postfix' === entry.associativity) ? this.postfixOperators : this.binaryOperators;
+	operators[entry.token.toLowerCase()] = entry;
 };
 
 /**

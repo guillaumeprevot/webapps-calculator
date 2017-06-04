@@ -2,6 +2,10 @@
 
 A calculator application with usual mathematical features, extendable function support and unit conversion.
 
+```Example
+If((1+Pi == acos(-1) + (-2) + 3) == true, "OK", "KO")
+```
+
 ## Présentation
 
 [Cette application](http://techgp.fr/webapps/webapps-calculator.html) écrite en HTML5, JavaScript et CSS3 vous donnera accès à une calculatrice directement dans votre navigateur.
@@ -137,6 +141,9 @@ Ce projet est distribué sous licence MIT, reproduite dans le fichier LICENSE ic
 
 2017-05-21
 - mise à jour de jQuery (2.2.4 en 3.2.1) et moment.js (2.15.0 en 2.18.1)
+
+2017-05-30
+- création des méthodes addLiteralEntry, addFunctionEntry et addOperatorEntry pour pouvoir créer soit-même les litéraux, fonctions et opérateurs sans connaitre le fonctionnement interne de Calculator
 
 ## TODO
 
