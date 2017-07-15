@@ -145,6 +145,9 @@ Ce projet est distribué sous licence MIT, reproduite dans le fichier LICENSE ic
 2017-05-30
 - création des méthodes addLiteralEntry, addFunctionEntry et addOperatorEntry pour pouvoir créer soit-même les litéraux, fonctions et opérateurs sans connaitre le fonctionnement interne de Calculator
 
+2017-07-15
+- correction d'un bug dans l'exécution des fonctions sans paramètre (calculator.evalAll ne répondait pas)
+
 ## TODO
 
 - passer en ServiceWorker pour la gestion du cache plutôt que AppCache

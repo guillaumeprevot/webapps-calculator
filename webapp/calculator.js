@@ -512,6 +512,10 @@ Calculator.prototype.eval = function(tree, resolve, reject) {
 };
 
 Calculator.prototype.evalAll = function(params, resolve, reject) {
+	if (params.length === 0) {
+		resolve([]);
+		return;
+	}
 	var count = params.length;
 	var values = [];
 	values.length = count;
