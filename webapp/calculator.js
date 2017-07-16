@@ -172,6 +172,7 @@ CalculatorError.prototype.format = function(lang) {
  * @member {String} dateFormat - the "moment" format to support date literals
  * @member {String} timeFormat - the "moment" format to support time literals
  * @member {String} datetimeFormat - the "moment" format to support datetime literals
+ * @member {Array} literalTypes - the list of methods used to guess literal values like dates, numbers, hexa numbers, ...
  *
  * @member {String} formula - the formula to parse
  * @member {Number} index - the current position during parsing, from 0 to formula.length
@@ -186,6 +187,7 @@ function Calculator() {
 	this.dateFormat = '"YYYY/MM/DD"';
 	this.timeFormat = '"HH:mm"';
 	this.datetimeFormat = '"YYYY/MM/DD HH:mm"';
+	this.literalTypes = null;
 
 	this.formula = undefined;
 	this.index = undefined;
@@ -411,6 +413,43 @@ Calculator.prototype.addDefaultOperators = function(lang) {
 	// add('.', 'left', binary(function(a, b) { return a[b]; })); // member access
 };
 
+Calculator.prototype.checkReady = function() {
+	var calculator = this;
+	if (calculator.literalTypes !== null)
+		return;
+	calculator.literalTypes = [];
+	function add(literalType) {
+		calculator.literalTypes.push(literalType);
+	}
+	function addLiteralForRegExp(expression, transform) {
+		add(function(token) { if (expression.test(token)) return transform(token); });
+	}
+	function addLiteralForDateTime(format) {
+		if (format)
+			add(function(token) { var m = moment.utc(token, format, true/*strict*/); if (m.isValid()) return m; });
+	}
+	if (typeof moment !== 'undefined') {
+		// date/time support
+		addLiteralForDateTime(calculator.datetimeFormat);
+		// date support
+		addLiteralForDateTime(calculator.dateFormat);
+		// time support
+		addLiteralForDateTime(calculator.timeFormat);
+	}
+	// string support
+	add(function(token) { if (token.length >= 2 && token[0] === '"' && token[token.length - 1] === '"') return token.substring(1, token.length - 1).replace('\\"', '"'); });
+	// integer in hexadecimal format support
+	addLiteralForRegExp(/0x[0-9a-fA-F]+/, function(token) { return parseInt(token.substring(2), 16); });
+	// integer in octal format support
+	addLiteralForRegExp(/0o[0-7]+/, function(token) { return parseInt(token.substring(2), 8); });
+	// integer in binary format support
+	addLiteralForRegExp(/0b[0-1]+/, function(token) { return parseInt(token.substring(2), 2); });
+	// float in decimal format support
+	addLiteralForRegExp(/\d+\.\d+/, function(token) { return parseFloat(token); });
+	// integer in decimal format support
+	addLiteralForRegExp(/\d+/, function(token) { return parseInt(token); });
+};
+
 /**
  * This method tries to parse a formula into an abstract syntax tree (AST).
  * Then, you can use "format" or "eval" methods, passing them the "parse" result AST.
@@ -418,6 +457,7 @@ Calculator.prototype.addDefaultOperators = function(lang) {
  * @param {String} formula - the formula to parse
  */
 Calculator.prototype.parse = function(formula) {
+	this.checkReady();
 	this.formula = formula.trim();
 	this.index = 0;
 	this.separators = ['(', ')', '[', ']', ' '];
@@ -742,34 +782,6 @@ Calculator.prototype.Array = function(type, lastToken) {
 
 Calculator.prototype.Literal = function(token) {
 	var tokenLC = token.toLowerCase();
-	var literals = [];
-
-	function addLiteralForRegExp(expression, transform) {
-		literals.push(function(token) { if (expression.test(token)) return transform(token); });
-	}
-	function addLiteralForDateTime(format) {
-		literals.push(function(token) { var m = moment.utc(token, format, true/*strict*/); if (m.isValid()) return m; });
-	}
-	if (typeof moment !== 'undefined') {
-		// date/time support
-		addLiteralForDateTime(this.datetimeFormat);
-		// date support
-		addLiteralForDateTime(this.dateFormat);
-		// time support
-		addLiteralForDateTime(this.timeFormat);
-	}
-	// string support
-	literals.push(function(token) { if (token.length >= 2 && token[0] === '"' && token[token.length - 1] === '"') return token.substring(1, token.length - 1).replace('\\"', '"'); });
-	// integer in hexadecimal format support
-	addLiteralForRegExp(/0x[0-9a-fA-F]+/, function(token) { return parseInt(token.substring(2), 16); });
-	// integer in octal format support
-	addLiteralForRegExp(/0o[0-7]+/, function(token) { return parseInt(token.substring(2), 8); });
-	// integer in binary format support
-	addLiteralForRegExp(/0b[0-1]+/, function(token) { return parseInt(token.substring(2), 2); });
-	// float in decimal format support
-	addLiteralForRegExp(/\d+\.\d+/, function(token) { return parseFloat(token); });
-	// integer in decimal format support
-	addLiteralForRegExp(/\d+/, function(token) { return parseInt(token); });
 
 	// Throw error if the token is a function name
 	if (this.functions.hasOwnProperty(tokenLC) || this.separators.indexOf(tokenLC) >= 0)
@@ -780,8 +792,8 @@ Calculator.prototype.Literal = function(token) {
 		return { type: 'literal', token: token, literal: this.literals[tokenLC] };
 
 	// Literal constructions
-	for (var i = 0; i < literals.length; i++) {
-		var value = literals[i](token);
+	for (var i = 0; i < this.literalTypes.length; i++) {
+		var value = this.literalTypes[i](token);
 		if (value !== undefined)
 			return { type: 'literal', token: token, value: value };
 	}

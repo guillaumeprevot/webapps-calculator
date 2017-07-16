@@ -147,6 +147,7 @@ Ce projet est distribué sous licence MIT, reproduite dans le fichier LICENSE ic
 
 2017-07-15
 - correction d'un bug dans l'exécution des fonctions sans paramètre (calculator.evalAll ne répondait pas)
+- préparation en amont du code de détection des valeurs (texte, date, heure, nombre, nombre au format héxadécimal, ...)
 
 ## TODO
 
