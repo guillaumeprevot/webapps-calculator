@@ -288,6 +288,13 @@ Calculator.prototype.addDefaultFunctions = function(lang) {
 			context.eval(result ? v1 : v2, resolve, reject);
 		}, reject);
 	});
+	if (typeof moment !== 'undefined') {
+		calculator.addFunction(lang('formatDate'), lang('date, format'), function(context, resolve, reject, date, format) {
+			context.evalAll([date, format], function(results) {
+				resolve(results[0].format(results[1]));
+			}, reject);
+		});
+	}
 };
 
 /**

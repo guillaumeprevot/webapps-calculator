@@ -148,6 +148,7 @@ Ce projet est distribué sous licence MIT, reproduite dans le fichier LICENSE ic
 2017-07-15
 - correction d'un bug dans l'exécution des fonctions sans paramètre (calculator.evalAll ne répondait pas)
 - préparation en amont du code de détection des valeurs (texte, date, heure, nombre, nombre au format héxadécimal, ...)
+- ajout d'une méthode "formatDate(date, format)" pour tester les dates, heures et texte (ex: formatDate("2017/07/16 16:23", "MM/DD/YYYY hh:mm a"))
 
 ## TODO
 
