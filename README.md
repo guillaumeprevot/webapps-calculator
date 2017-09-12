@@ -150,6 +150,11 @@ Ce projet est distribué sous licence MIT, reproduite dans le fichier LICENSE ic
 - préparation en amont du code de détection des valeurs (texte, date, heure, nombre, nombre au format héxadécimal, ...)
 - ajout d'une méthode "formatDate(date, format)" pour tester les dates, heures et texte (ex: formatDate("2017/07/16 16:23", "MM/DD/YYYY hh:mm a"))
 
+2017-09-12
+- intégration de Node.js, Grunt et JSHint pour améliorer le code JS
+- renommage de "eval" en "calculate" pour éviter les warning de JSHint "eval can be harmful."
+- renommage de "evalAll" en "calculateAll" par cohérence par "eval"=>"calculate"
+
 ## TODO
 
 - passer en ServiceWorker pour la gestion du cache plutôt que AppCache

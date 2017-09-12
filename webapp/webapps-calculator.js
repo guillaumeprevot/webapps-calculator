@@ -371,7 +371,7 @@ $(function() {
 	calculator.addDefaultOperators(lang);
 
 	calculator.addFunction(lang('convert'), lang('1, "srcUnit", "dstUnit"'), function(context, resolve, reject, n, u1, u2) {
-		context.evalAll([n, u1, u2], function(values) {
+		context.calculateAll([n, u1, u2], function(values) {
 			var converter = new Converter();
 			converter.addMoneyCategory(function() {
 				resolve(converter.convert(values[0], values[1], values[2]));
@@ -392,7 +392,7 @@ $(function() {
 			val = input.value;
 			tree = calculator.parse(val);
 			//console.log(calculator.format(tree), tree);
-			calculator.eval(tree, function(output) {
+			calculator.calculate(tree, function(output) {
 				// console.log(output);
 				input.value = (output === null) ? 'null' : (typeof output === 'undefined') ? '' : output.toString();
 				setMessage(val, false);
@@ -534,7 +534,7 @@ $(function() {
 
 	/* Le bouton d'enregistrement en mémoire (MemoryStore) */
 	$('#calculator-help .ms').click(function() {
-		input.value = 'mem = (' + input.value + ')'
+		input.value = 'mem = (' + input.value + ')';
 	});
 
 	/* Le bouton de lecture de la mémoire (MemoryRead) */

@@ -34,21 +34,21 @@ function CalculatorLiteral(token, value, setter) {
  *
  * Example for "min" function :
  * new CalculatorFunction("min", "a, b", function(context, resolve, reject, a, b) {
- *   context.evalAll([a, b], function(params) {
+ *   context.calculateAll([a, b], function(params) {
  *     resolve(Math.min(params[0], params[1]));
  *   }, reject);
  * })
  *
  * Example for "if" function :
  * new CalculatorFunction("if", "test, yes, no", function(context, resolve, reject, test, yes, no) {
- *   context.eval(test, function(result) {
- *     context.eval(result ? yes : no, resolve, reject);
+ *   context.calculate(test, function(result) {
+ *     context.calculate(result ? yes : no, resolve, reject);
  *   }, reject);
  * })
  *
  * Example for an asynchonous calculation function :
  * new CalculatorFunction("myAsyncFunc", "a, b", function(context, resolve, reject, a, b) {
- *   context.evalAll([a, b], function(params) {
+ *   context.calculateAll([a, b], function(params) {
  *   	myAsyncFunc(params)
  *        .done(function(data) { resolve(data); })
  *        .fail(function(error) { reject(error); });
@@ -74,14 +74,14 @@ function CalculatorFunction(token, params, calculate) {
  *
  * Example for the substraction binay operator :
  * new CalculatorOperator("-", 11, 'left', function(context, resolve, reject, a, b) {
- *   context.evalAll([a, b], function(params) {
+ *   context.calculateAll([a, b], function(params) {
  *     resolve(params[0] - params[1]);
  *   }, reject);
  * })
  * 
  * Example for the ² postfix operator :
  * new CalculatorOperator("-", 14, 'postfix', function(context, resolve, reject, a) {
- *   context.eval(a, function(result) {
+ *   context.calculate(a, function(result) {
  *     resolve(Math.pow(result, 2));
  *   }, reject);
  * })
@@ -162,7 +162,7 @@ CalculatorError.prototype.format = function(lang) {
 };
 
 /**
- * The calculator combines the grammar (~syntax) and the parser (parse/format/eval)
+ * The calculator combines the grammar (~syntax) and the parser (parse/format/calculate)
  *
  * @member {Map} literals - the map from token to literals accepted in the grammar
  * @member {Map} functions - the map from function's name to function accepted in the grammar
@@ -222,7 +222,7 @@ Calculator.prototype.addDefaultLiterals = function(lang) {
 	var calculator = this;
 	function add(token, value, setter) {
 		calculator.addLiteral(lang(token), value, setter);	
-	};
+	}
 	add('true', true);
 	add('false', false);
 	add('null', null);
@@ -266,7 +266,7 @@ Calculator.prototype.addDefaultFunctions = function(lang) {
 			for (var i = 3; i < arguments.length; i++) {
 				params.push(arguments[i]);
 			}
-			context.evalAll(params, function(values) {
+			context.calculateAll(params, function(values) {
 				// Call Math function with evaluated values
 				resolve(Math[token].apply(Math, values));
 			}, reject);
@@ -279,18 +279,18 @@ Calculator.prototype.addDefaultFunctions = function(lang) {
 	'min,max'.split(',').forEach(function(token) { addFromMath(token, 'x1, x2*'); });
 
 	calculator.addFunction(lang('cbrt'), lang('x'), function(context, resolve, reject, x) {
-		context.eval(x, function(x) {
+		context.calculate(x, function(x) {
 			resolve((x < 0 ? -1 : 1) * Math.pow(Math.abs(x), 1/3));
 		}, reject);
 	});
 	calculator.addFunction(lang('if'), lang('test, trueValue, falseValue'), function(context, resolve, reject, test, v1, v2) {
-		context.eval(test, function(result) {
-			context.eval(result ? v1 : v2, resolve, reject);
+		context.calculate(test, function(result) {
+			context.calculate(result ? v1 : v2, resolve, reject);
 		}, reject);
 	});
 	if (typeof moment !== 'undefined') {
 		calculator.addFunction(lang('formatDate'), lang('date, format'), function(context, resolve, reject, date, format) {
-			context.evalAll([date, format], function(results) {
+			context.calculateAll([date, format], function(results) {
 				resolve(results[0].format(results[1]));
 			}, reject);
 		});
@@ -333,20 +333,20 @@ Calculator.prototype.addDefaultOperators = function(lang) {
 		calculator.addOperator(lang(token), precedence, associativity, calculate);
 	}
 	function unary(calculate) {
-		return function(context, resolve, reject, a) { context.eval(a, function(result) { resolve(calculate(result)); }, reject); };
+		return function(context, resolve, reject, a) { context.calculate(a, function(result) { resolve(calculate(result)); }, reject); };
 	}
 	function variable(execute) {
-		return function(context, resolve, reject, v) { resolve(execute(v.literal)); }
+		return function(context, resolve, reject, v) { resolve(execute(v.literal)); };
 	}
 	function binary(calculate) {
-		return function(context, resolve, reject, a, b) { context.evalAll([a, b], function(results) { resolve(calculate(results[0], results[1])); }, reject); };
+		return function(context, resolve, reject, a, b) { context.calculateAll([a, b], function(results) { resolve(calculate(results[0], results[1])); }, reject); };
 	}
 	var precedence = 0;
 	// "," is also used to parse function parameters (between "(" and ")") or array elements (between "[" and "]")
 	add(',', 'left', binary(function(a, b) { return a.concat ? a.concat(b) : [a, b]; }));
 	precedence++;
 	add('=', 'right', function(context, resolve, reject, variable, b) {
-		context.eval(b, function(result) {
+		context.calculate(b, function(result) {
 			variable.literal.value = result;
 			resolve(result);
 		}, reject);
@@ -356,21 +356,21 @@ Calculator.prototype.addDefaultOperators = function(lang) {
 	// ? :
 	precedence++;
 	add('||', 'left', function(context, resolve, reject, a, b) {
-		context.eval(a, function(a) {
+		context.calculate(a, function(a) {
 			if (a)
 				resolve(true);
 			else
-				context.eval(b, resolve, reject);
-		}, reject)
+				context.calculate(b, resolve, reject);
+		}, reject);
 	});
 	precedence++;
 	add('&&', 'left', function(context, resolve, reject, a, b) {
-		context.eval(a, function(a) {
+		context.calculate(a, function(a) {
 			if (!a)
 				resolve(false);
 			else
-				context.eval(b, resolve, reject);
-		}, reject)
+				context.calculate(b, resolve, reject);
+		}, reject);
 	});
 	precedence++;
 	add('|', 'left', binary(function(a, b) { return a | b; })); // bitwise OR
@@ -381,8 +381,8 @@ Calculator.prototype.addDefaultOperators = function(lang) {
 	precedence++;
 	add('===', 'left', binary(function(a, b) { return a === b; }));
 	add('!==', 'left', binary(function(a, b) { return a !== b; }));
-	add('==', 'left', binary(function(a, b) { return a == b; }));
-	add('!=', 'left', binary(function(a, b) { return a != b; })); // &#x2260;
+	add('==', 'left', binary(/*jslint eqeq: true*/function(a, b) { return a == b; }));
+	add('!=', 'left', binary(/*jslint eqeq: true*/function(a, b) { return a != b; })); // &#x2260;
 	precedence++;
 	add('<', 'left', binary(function(a, b) { return a < b; }));
 	add('>', 'left', binary(function(a, b) { return a > b; }));
@@ -459,22 +459,23 @@ Calculator.prototype.checkReady = function() {
 
 /**
  * This method tries to parse a formula into an abstract syntax tree (AST).
- * Then, you can use "format" or "eval" methods, passing them the "parse" result AST.
+ * Then, you can use "format" or "calculate" methods, passing them the "parse" result AST.
  *
  * @param {String} formula - the formula to parse
  */
 Calculator.prototype.parse = function(formula) {
+	var p;
 	this.checkReady();
 	this.formula = formula.trim();
 	this.index = 0;
 	this.separators = ['(', ')', '[', ']', ' '];
-	for (var p in this.prefixOperators) {
+	for (p in this.prefixOperators) {
 		this.separators.push(p);
 	}
-	for (var p in this.postfixOperators) {
+	for (p in this.postfixOperators) {
 		this.separators.push(p);
 	}
-	for (var p in this.binaryOperators) {
+	for (p in this.binaryOperators) {
 		this.separators.push(p);
 	}
 	return this.eParser();
@@ -507,7 +508,7 @@ Calculator.prototype.format = function(tree) {
 			return this.format(tree.left) + tree.token;
 		case 'function': // token ( params )
 			return tree.token + '(' + tree.params.map(this.format.bind(this)).join(', ') + ')';
-	};
+	}
 	throw Error('Invalid tree node type ' + tree.type, tree);
 };
 
@@ -517,7 +518,7 @@ Calculator.prototype.format = function(tree) {
  * <code>
  * var formula = "1+  2 ²"
  * var ast = calculator.parse(formula);
- * calculator.eval(ast, function(value) {
+ * calculator.calculate(ast, function(value) {
  *   console.log(value, typeof value); // 5, number
  * }, function(error) {
  *   console.log('Error', error);
@@ -526,7 +527,7 @@ Calculator.prototype.format = function(tree) {
  *
  * @param {Object} tree - the tree to evaluate
  */
-Calculator.prototype.eval = function(tree, resolve, reject) {
+Calculator.prototype.calculate = function(tree, resolve, reject) {
 	if (typeof tree === 'undefined') {
 		resolve(undefined);
 		return;
@@ -536,10 +537,10 @@ Calculator.prototype.eval = function(tree, resolve, reject) {
 			resolve((typeof tree.value !== 'undefined') ? tree.value : tree.literal.value);
 			break;
 		case 'array': // [ params ]
-			this.evalAll(tree.params, resolve, reject);
+			this.calculateAll(tree.params, resolve, reject);
 			break;
 		case 'grouping': // ( ... )
-			this.eval(tree.left, resolve, reject);
+			this.calculate(tree.left, resolve, reject);
 			break;
 		case 'binary': // left token right
 			this.binaryOperators[tree.token].calculate(this, resolve, reject, tree.left, tree.right);
@@ -555,10 +556,10 @@ Calculator.prototype.eval = function(tree, resolve, reject) {
 			break;
 		default:
 			reject(new Error('Invalid tree node type ' + tree.type, tree));
-	};
+	}
 };
 
-Calculator.prototype.evalAll = function(params, resolve, reject) {
+Calculator.prototype.calculateAll = function(params, resolve, reject) {
 	if (params.length === 0) {
 		resolve([]);
 		return;
@@ -567,7 +568,7 @@ Calculator.prototype.evalAll = function(params, resolve, reject) {
 	var values = [];
 	values.length = count;
 	params.forEach(function(param, index) {
-		this.eval(param, function(value) {
+		this.calculate(param, function(value) {
 			values[index] = value;
 			if (count === 1) // si c'est le dernier
 				resolve(values); // on a fini
@@ -593,11 +594,12 @@ Calculator.prototype.next = function() {
 	// The last token when the string is over is an empty token
 	if (this.index === this.formula.length)
 		return '';
+	var i;
 	// Check if a string starts at current position
 	if (this.formula[this.index] === '"') {
 		// In that case, find the next closing quote
 		var previous = '';
-		var i = this.index + 1; 
+		i = this.index + 1; 
 		while (i < this.formula.length
 				&& (this.formula[i] !== '"' || previous === '\\')) { // skip despecialized quotes
 			previous = this.formula[i];
@@ -610,7 +612,7 @@ Calculator.prototype.next = function() {
 	}
 	// Search the next occurence of each separators
 	var index = -1, length = 0;
-	for (var i = 0; i < this.separators.length; i++) {
+	for (i = 0; i < this.separators.length; i++) {
 		var p = this.formula.indexOf(this.separators[i], this.index);
 		if (p >= 0) {
 			if (index === -1 || index > p) {
@@ -707,9 +709,10 @@ Calculator.prototype.Exp = function(p) {
 Calculator.prototype.Primary = function() {
 	// Get next token
 	var token = this.next();
+	var op, t;
 	if (this.prefixOperators.hasOwnProperty(token.toLowerCase())) {
 		// If token is a prefix operator : consume it, get right part expresion and we are done
-		var op = this.prefixOperators[token.toLowerCase()];
+		op = this.prefixOperators[token.toLowerCase()];
 		this.consume(token);
 		var q = op.precedence;
 		var right = this.Exp(q);
@@ -718,45 +721,47 @@ Calculator.prototype.Primary = function() {
 			token: token.toLowerCase(),
 			right: right
 		};
-	} else if ('(' === token) {
+	}
+	if ('(' === token) {
 		// If token is a '(' : consume it, get a single grouped expression and we should find the closing ')'
 		this.consume(token);
-		var t = this.Exp(0);
+		t = this.Exp(0);
 		this.expect(')');
 		return {
 			type: 'grouping',
 			left: t
 		};
-	} else if ('[' === token) {
+	}
+	if ('[' === token) {
 		// If token is a '[' : consume it, get a multiple expressions array and we should find the closing ']'
 		this.consume(token);
-		var t = this.Array('array', ']');
+		t = this.Array('array', ']');
 		return t;
-	} else if (this.functions.hasOwnProperty(token.toLowerCase())) {
+	}
+	if (this.functions.hasOwnProperty(token.toLowerCase())) {
 		// If the token is a function's name : consume it and get parameters between '(' and ')'
 		var f = this.functions[token.toLowerCase()];
 		this.consume(token);
 		this.expect('(');
-		var t = this.Array('function', ')');
+		t = this.Array('function', ')');
 		t.token = token.toLowerCase();
 		return t;
-	} else {
-		// Finally, the token should be a literal : consume it and check if it is followed by one or more postfix operators
-		var left = this.Literal(token);
-		this.consume(token);
-		token = this.next().toLowerCase();
-		while (this.postfixOperators.hasOwnProperty(token)) {
-			var op = this.postfixOperators[token];
-			this.consume(token);
-			left = {
-				type: 'postfix',
-				token: token,
-				left: left
-			};
-			token = this.next().toLowerCase();
-		}
-		return left;
 	}
+	// Finally, the token should be a literal : consume it and check if it is followed by one or more postfix operators
+	var left = this.Literal(token);
+	this.consume(token);
+	token = this.next().toLowerCase();
+	while (this.postfixOperators.hasOwnProperty(token)) {
+		op = this.postfixOperators[token];
+		this.consume(token);
+		left = {
+			type: 'postfix',
+			token: token,
+			left: left
+		};
+		token = this.next().toLowerCase();
+	}
+	return left;
 };
 
 Calculator.prototype.Array = function(type, lastToken) {
