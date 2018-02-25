@@ -3,7 +3,7 @@
  *
  * Example for "true" literal :
  * new CalculatorLiteral('true', true);
- * 
+ *
  * Example for a variable called "v" :
  * var v = 0;
  * new CalculatorLiteral('v',
@@ -78,14 +78,14 @@ function CalculatorFunction(token, params, calculate) {
  *     resolve(params[0] - params[1]);
  *   }, reject);
  * })
- * 
+ *
  * Example for the ² postfix operator :
  * new CalculatorOperator("-", 14, 'postfix', function(context, resolve, reject, a) {
  *   context.calculate(a, function(result) {
  *     resolve(Math.pow(result, 2));
  *   }, reject);
  * })
- * 
+ *
  * @param {String} token - the token, as seen in formula
  * @param {Number} precedence - the precedence of the operator (multiplication has greater precedence over addition)
  * @param {String} associativity - how to apply operator (can be "left" or "right" for binary operators and "prefix" or "postfix" for unary operators)
@@ -169,11 +169,12 @@ CalculatorError.prototype.format = function(lang) {
  * @member {Map} prefixOperators - the map from operator's token to prefix operator accepted in the grammar
  * @member {Map} postfixOperators - the map from operator's token to postfix operator accepted in the grammar
  * @member {Map} binaryOperators - the map from operator's token to binary operator accepted in the grammar
+ * @member {Boolean} dateUtc - the "moment" flag to support date utc
  * @member {String} dateFormat - the "moment" format to support date literals
  * @member {String} timeFormat - the "moment" format to support time literals
  * @member {String} datetimeFormat - the "moment" format to support datetime literals
- * @member {Array} literalTypes - the list of methods used to guess literal values like dates, numbers, hexa numbers, ...
  *
+ * @member {Array} literalTypes - the list of methods used to guess literal values like dates, numbers, hexa numbers, ...
  * @member {String} formula - the formula to parse
  * @member {Number} index - the current position during parsing, from 0 to formula.length
  * @member {Array} separators - a compact list of token separators, build from grammar to optimize parsing
@@ -184,11 +185,13 @@ function Calculator() {
 	this.prefixOperators = {};
 	this.postfixOperators = {};
 	this.binaryOperators = {};
+
+	this.dateUtc = true;
 	this.dateFormat = '"YYYY/MM/DD"';
 	this.timeFormat = '"HH:mm"';
 	this.datetimeFormat = '"YYYY/MM/DD HH:mm"';
-	this.literalTypes = null;
 
+	this.literalTypes = null;
 	this.formula = undefined;
 	this.index = undefined;
 	this.separators = undefined;
@@ -221,7 +224,7 @@ Calculator.prototype.addLiteralEntry = function(entry) {
 Calculator.prototype.addDefaultLiterals = function(lang) {
 	var calculator = this;
 	function add(token, value, setter) {
-		calculator.addLiteral(lang(token), value, setter);	
+		calculator.addLiteral(lang(token), value, setter);
 	}
 	add('true', true);
 	add('false', false);
@@ -429,11 +432,17 @@ Calculator.prototype.checkReady = function() {
 		calculator.literalTypes.push(literalType);
 	}
 	function addLiteralForRegExp(expression, transform) {
-		add(function(token) { if (expression.test(token)) return transform(token); });
+		add(function(token) {
+			if (expression.test(token))
+				return transform(token);
+		});
 	}
 	function addLiteralForDateTime(format) {
-		if (format)
-			add(function(token) { var m = moment.utc(token, format, true/*strict*/); if (m.isValid()) return m; });
+		add(function(token) {
+			var m = calculator.dateUtc ? moment.utc(token, format, true/*strict*/) : moment(token, format, true/*strict*/);
+			if (m.isValid())
+				return m;
+		});
 	}
 	if (typeof moment !== 'undefined') {
 		// date/time support
@@ -444,7 +453,10 @@ Calculator.prototype.checkReady = function() {
 		addLiteralForDateTime(calculator.timeFormat);
 	}
 	// string support
-	add(function(token) { if (token.length >= 2 && token[0] === '"' && token[token.length - 1] === '"') return token.substring(1, token.length - 1).replace('\\"', '"'); });
+	add(function(token) {
+		if (token.length >= 2 && token[0] === '"' && token[token.length - 1] === '"')
+			return token.substring(1, token.length - 1).replace('\\"', '"');
+	});
 	// integer in hexadecimal format support
 	addLiteralForRegExp(/0x[0-9a-fA-F]+/, function(token) { return parseInt(token.substring(2), 16); });
 	// integer in octal format support
@@ -580,6 +592,179 @@ Calculator.prototype.calculateAll = function(params, resolve, reject) {
 	}.bind(this));
 };
 
+Calculator.prototype.reduce = function(tree, resolve, reject) {
+	// Construit une literal temporaire sur la base d'un résultat.
+	function makeLiteral(v) {
+		var lit = new CalculatorLiteral('', v);
+		lit.type = 'literal';
+		return lit;
+	}
+
+	// Retourne true si c'est valeur.
+	function isConstant(o) {
+		return typeof o === 'number'
+			|| typeof o === 'boolean'
+			|| typeof o === 'string'
+			|| o === null
+			|| o instanceof moment;
+	}
+
+	// Convertie une constante en une expression.
+	var toExpression = function (o) {
+		if (typeof o === 'object' && o && o.reduce)
+			return o.reduce;
+		if (typeof o === 'number')
+			return '' + o;
+		if (typeof o === 'boolean')
+			return o === true ? 'true' : 'false';
+		if (typeof o === 'string')
+			return '"' + o + '"';
+		if (o instanceof moment)
+			return o.format(this.datetimeFormat);
+		return 'null';
+	}.bind(this);
+
+	if (typeof tree === 'undefined') {
+		resolve(undefined);
+		return;
+	}
+
+	switch (tree.type) {
+		case 'literal': // 1, 123.45, true, null, pi, ...
+			if (typeof tree.value !== 'undefined')
+				resolve(tree.value);
+			else if (! tree.literal.notResolved)
+				resolve(tree.literal.value);
+			else
+				resolve({ reduce: tree.token });
+			break;
+		case 'array': // [ params ]
+			this.reduceAll(tree.params, function(results) {
+				var x;
+
+				var allConstant = true;
+				for (x = 0; x < results.length; x++) {
+					if (! isConstant(results[x])) {
+						allConstant = false;
+						break;
+					}
+				}
+
+				if (allConstant) {
+					// On retourne le tableau calculé.
+					resolve(results);
+				} else {
+					// On renvoit une déclaration du tableau
+					var expression = tree.token  + '[';
+					for (x = 0; x < results.length; x++) {
+						if (x !== 0)
+							expression += ',';
+						expression += toExpression(results[x]);
+					}
+					expression += ']';
+					resolve({ reduce: expression });
+				}
+			}.bind(this), reject);
+			break;
+		case 'grouping': // ( ... )
+			this.reduce(tree.left, function(resultLeft) {
+				if (isConstant(resultLeft))
+					resolve(resultLeft);
+				else
+					resolve({ reduce: '(' + toExpression(resultLeft) + ')' });
+			}.bind(this), reject);
+			break;
+		case 'binary': // left token right
+			this.reduce(tree.left, function(resultLeft) {
+				this.reduce(tree.right, function(resultRight) {
+					if (isConstant(resultLeft) && isConstant(resultRight)) {
+						this.binaryOperators[tree.token].calculate(this, resolve, reject, makeLiteral(resultLeft), makeLiteral(resultRight));
+					} else {
+						var expression = toExpression(resultLeft) + tree.token + toExpression(resultRight);
+						resolve({ reduce: expression });
+					 }
+				}.bind(this), reject);
+			}.bind(this), reject);
+			break;
+		case 'prefix': // token right
+			this.reduce(tree.right, function(resultRight) {
+				if (isConstant(resultRight)) {
+					//JEROME -- ou ++ ne devrait pas reduce.
+					this.prefixOperators[tree.token].calculate(this, resolve, reject, makeLiteral(resultRight));
+				} else {
+					//JEROME -- ou ++ ne devrait pas reduce.
+					var expression = tree.token + toExpression(resultRight);
+					resolve({ reduce: expression });
+				}
+			}.bind(this), reject);
+			break;
+		case 'postfix': // left token
+			this.reduce(tree.left, function(resultLeft) {
+				if (isConstant(resultLeft)) {
+					//JEROME -- ou ++ ne devrait pas reduce.
+					this.postfixOperators[tree.token].calculate(this, resolve, reject, makeLiteral(resultLeft));
+				} else {
+					//JEROME -- ou ++ ne devrait pas reduce.
+					var expression = toExpression(resultLeft) + tree.token;
+					resolve({ reduce: expression });
+				}
+			}.bind(this), reject);
+			break;
+		case 'function': // token ( params )
+			// TODO le reduceAll des fonctions ne devrait pas réduire tout d'un coup (par exemple pour la fonction "si")
+			this.reduceAll(tree.params, function(results) {
+				var x;
+				var allConstant = true;
+				for (x = 0; x < results.length; x++) {
+					if (! isConstant(results[x])) {
+						allConstant = false;
+						break;
+					}
+				}
+
+				if (allConstant) {
+					var literalParams = results.map(function(o) {
+						return makeLiteral(o);
+					});
+					this.functions[tree.token].calculate.apply(null, [this, resolve, reject].concat(literalParams));
+				} else {
+					var expression = tree.token  + '(';
+					for (x = 0; x < results.length; x++) {
+						if (x !== 0)
+							expression += ',';
+						expression += toExpression(results[x]);
+					}
+					expression += ')';
+					resolve({ reduce: expression });
+				}
+			}.bind(this), reject);
+			break;
+		default:
+			reject(new Error('Invalid tree node type ' + tree.type, tree));
+	}
+};
+
+Calculator.prototype.reduceAll = function(params, resolve, reject) {
+	if (params.length === 0) {
+		resolve([]);
+		return;
+	}
+	var count = params.length;
+	var values = [];
+	values.length = count;
+	params.forEach(function(param, index) {
+		this.reduce(param, function(value) {
+			values[index] = value;
+			if (count === 1) // si c'est le dernier
+				resolve(values); // on a fini
+			count--; // on décrémente après
+		}, function(error) {
+			count = 0; // pour être sûr de ne pas appeler "resolve" ensuite
+			reject(error);
+		});
+	}.bind(this));
+};
+
 /** stops the parsing process and reports an error. */
 Calculator.prototype.error = function(message, params, tokenLength) {
 	// Stop algorithm
@@ -599,7 +784,7 @@ Calculator.prototype.next = function() {
 	if (this.formula[this.index] === '"') {
 		// In that case, find the next closing quote
 		var previous = '';
-		i = this.index + 1; 
+		i = this.index + 1;
 		while (i < this.formula.length
 				&& (this.formula[i] !== '"' || previous === '\\')) { // skip despecialized quotes
 			previous = this.formula[i];
@@ -647,7 +832,7 @@ Calculator.prototype.consume = function(text) {
 
 /** if next = text then consume else error */
 Calculator.prototype.expect = function(text) {
-	// Get next token 
+	// Get next token
 	var s = this.next();
 	// Check if this token matches expected text
 	if (s === text)
@@ -660,7 +845,7 @@ Calculator.prototype.expect = function(text) {
 
 /**
  * La fonction retourne un arbre représentant l'interprétation de la formule.
- * 
+ *
  * Il y a différents types de noeuds :
  * - literal(token, value) : une valeur finale (feuille de l'arbre)
  * - array(params) : un tableau de valeurs entourées de [ et ] et séparées par ','
@@ -668,7 +853,7 @@ Calculator.prototype.expect = function(text) {
  * - binary(token, left, right) : un opérateur binaire avec la partie gauche et la partie droite
  * - prefix(right) : un opérateur unaire préfixe, avec la valeur à droite
  * - postfix(left) : un opérateur unaire postfixe, avec la valeur à gauche
- * - function(token, params) : une fonction dont token est le nom et params la liste des paramètres 
+ * - function(token, params) : une fonction dont token est le nom et params la liste des paramètres
  */
 Calculator.prototype.eParser = function() {
 	// Try to get the Abstract Syntax Tree (AST) for the expression starting at position 0

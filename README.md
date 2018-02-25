@@ -18,10 +18,6 @@ Les liens suivants ont été utiles pour cette application :
 - [moment.js 2.18.1](http://momentjs.com/) sous licence MIT
 - [ECB](http://www.ecb.europa.eu/stats/exchange/eurofxref/html/index.en.html) qui utilisé dans le convertisseur monétaire pour obtenir des taux de change quotidien
 
-L'application peut être utilisée en mode déconnecté après une première utilisation. Le fichier manifest `webapps-calculator.appcache` décrit comme doit se faire la mise en cache. Plus d'info chez Mozilla [en français](https://developer.mozilla.org/fr/docs/Utiliser_Application_Cache) ou [en anglais](https://developer.mozilla.org/en-US/docs/Web/HTML/Using_the_application_cache).
-
-NB : quand le certificat HTTPS est incorrect, la mise en cache échouera sous Chrome avec l'erreur `Manifest fetch Failed (9)`. Dans ce cas, faites les tests en HTTP et/ou utilisez un certificat valide en production.
-
 ## Captures d'écran
 
 ### Présentation de l'IHM
@@ -155,8 +151,17 @@ Ce projet est distribué sous licence MIT, reproduite dans le fichier LICENSE ic
 - renommage de "eval" en "calculate" pour éviter les warning de JSHint "eval can be harmful."
 - renommage de "evalAll" en "calculateAll" par cohérence par "eval"=>"calculate"
 
+2018-02-21
+- 2 contributions de [jsaintyv](https://github.com/jsaintyv)
+- ajout des méthodes "reduce" et "reduceAll" pour simplifier les expressions
+- ajout de l'option "dateUtc" pour choisir entre "moment(...)" ou "moment.utc(...)"
+
 ## TODO
 
+- permettre de choisir les "literalTypes" (fusion literal literaltype)
+- casser la récursivité
+- améliorer "reduceAll" pour être progressif (par exemple pour la fonction "si")
+- améliorer "reduce" pour détecter les variables (par exemple dans les opérateurs ++ et --)
 - passer en ServiceWorker pour la gestion du cache plutôt que AppCache
 - support de la notation 2.1e3 pour 2 * 10^3 
 - vérification des paramètres pour les fonctions et les opérateurs
