@@ -162,6 +162,30 @@ CalculatorError.prototype.format = function(lang) {
 };
 
 /**
+ *
+ * @member {String} type - either 'constant', 'literal', 'array', 'grouping', 'binary', 'prefix', 'postfix' or 'function'.
+ * @member {String} token - the symbol of an 'operator'/ 'function' or the formula that resulted to this 'constant' / 'literal'
+ * @member {CalculatorLiteral} literal - the literal definition that resulted to this 'literal'
+ * @member {CalculatorConstant} constant - the constant definition that resulted to this 'constant'
+ * @member {*} value - the value of a 'constant'
+ * @member {Array} params - the sub-elements of an 'array' or 'function'
+ * @member {CalculatorTree} left - the first sub-element of a 'binary' operator or the single sub-element of a 'grouping' element or 'postfix' operator
+ * @member {CalculatorTree} right - the second sub-element of a 'binary' operator or the single sub-element of a 'prefix' operator
+ * @param model
+ * @returns
+ */
+function CalculatorTree(model) {
+	this.type = model.type;
+	this.token = model.token;
+	this.literal = model.literal;
+	this.constant = model.constant;
+	this.value = model.value;
+	this.params = model.params;
+	this.left = model.left;
+	this.right = model.right;
+}
+
+/**
  * The calculator combines the grammar (~syntax) and the parser (parse/format/calculate)
  *
  * @member {Map} literals - the map from token to literals accepted in the grammar
@@ -474,6 +498,7 @@ Calculator.prototype.checkReady = function() {
  * Then, you can use "format" or "calculate" methods, passing them the "parse" result AST.
  *
  * @param {String} formula - the formula to parse
+ * @return {CalculatorTree} un objet représentant l'arbre syntaxique de la formule analysée
  */
 Calculator.prototype.parse = function(formula) {
 	var p;
@@ -879,12 +904,12 @@ Calculator.prototype.Exp = function(p) {
 		// Get the right part of the binary operator "token"
 		var right = this.Exp(q);
 		// Create a "binary" AST node
-		tree = {
+		tree = new CalculatorTree({
 			type: 'binary',
 			token: token,
 			left: tree, // a primary in the first loop, a binary after that
 			right: right
-		};
+		});
 		// And check if the next token is also a binary operator
 		token = this.next().toLowerCase();
 	}
@@ -901,21 +926,21 @@ Calculator.prototype.Primary = function() {
 		this.consume(token);
 		var q = op.precedence;
 		var right = this.Exp(q);
-		return {
+		return new CalculatorTree({
 			type: 'prefix',
 			token: token.toLowerCase(),
 			right: right
-		};
+		});
 	}
 	if ('(' === token) {
 		// If token is a '(' : consume it, get a single grouped expression and we should find the closing ')'
 		this.consume(token);
 		t = this.Exp(0);
 		this.expect(')');
-		return {
+		return new CalculatorTree({
 			type: 'grouping',
 			left: t
-		};
+		});
 	}
 	if ('[' === token) {
 		// If token is a '[' : consume it, get a multiple expressions array and we should find the closing ']'
@@ -939,11 +964,11 @@ Calculator.prototype.Primary = function() {
 	while (this.postfixOperators.hasOwnProperty(token)) {
 		op = this.postfixOperators[token];
 		this.consume(token);
-		left = {
+		left = new CalculatorTree({
 			type: 'postfix',
 			token: token,
 			left: left
-		};
+		});
 		token = this.next().toLowerCase();
 	}
 	return left;
@@ -954,7 +979,7 @@ Calculator.prototype.Array = function(type, lastToken) {
 	var token = this.next();
 	if (token === lastToken) {
 		this.consume(token);
-		return { type: type, params: [] };
+		return new CalculatorTree({ type: type, params: [] });
 	}
 	// array (true, 1, 2) will be represented in t as binary(binary(literal(true), literal(1)), literal(2))
 	var t = this.Exp(0);
@@ -971,10 +996,10 @@ Calculator.prototype.Array = function(type, lastToken) {
 	}
 	// start loop
 	add(t);
-	return {
+	return new CalculatorTree({
 		type: type,
 		params: params
-	};
+	});
 };
 
 Calculator.prototype.Literal = function(token) {
@@ -986,13 +1011,13 @@ Calculator.prototype.Literal = function(token) {
 
 	// Predefined literal like null, false, true, pi, ...
 	if (this.literals.hasOwnProperty(tokenLC))
-		return { type: 'literal', token: token, literal: this.literals[tokenLC] };
+		return new CalculatorTree({ type: 'literal', token: token, literal: this.literals[tokenLC] });
 
 	// Literal constructions
 	for (var i = 0; i < this.literalTypes.length; i++) {
 		var value = this.literalTypes[i](token);
 		if (value !== undefined)
-			return { type: 'literal', token: token, value: value };
+			return new CalculatorTree({ type: 'literal', token: token, value: value });
 	}
 
 	// Unsupported literal

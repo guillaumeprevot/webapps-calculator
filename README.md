@@ -162,6 +162,7 @@ Ce projet est distribué sous licence MIT, reproduite dans le fichier LICENSE ic
 2018-04-07
 - mise à jour de jQuery (3.2.1 en 3.3.1) et Moment.js (2.18.1 en 2.21.0)
 - utilisation des Service Workers pour la mise en cache au lieu de [Application Cache](https://developer.mozilla.org/fr/docs/Utiliser_Application_Cache)
+- création de la classe CalculatorTree pour formaliser le résultat de Calculator.parse
 
 ## TODO
 
