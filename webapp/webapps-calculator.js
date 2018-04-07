@@ -300,7 +300,7 @@ Converter.prototype.addMoneyCategory = function(resolve, reject) {
 		self.startCategory('Money');
 		self.addUnit('euro', 1, '€');
 		for (var currency in moneyRates) {
-			var symbol = (currency === 'USD') ? '$' : (currency === 'GBP') ? '£' : ''; 
+			var symbol = (currency === 'USD') ? '$' : (currency === 'GBP') ? '£' : '';
 			self.addUnit(currency, 1 / moneyRates[currency], symbol);
 		}
 		resolve();
@@ -425,7 +425,7 @@ $(function() {
 		$('#calculator-message').text(text || '');
 		$(document.body).toggleClass('error', !!text && isError).toggleClass('success', !!text && !isError);
 	}
-	
+
 	/* Les boutons qui ajoutent 1 caractère. Pour les opérateurs, on ajoute aussi des espaces autour */
 	$(document.body).on('click', 'button.syntax, button.numeric', function(event) {
 		var button = $(event.target);
@@ -458,7 +458,7 @@ $(function() {
 			$('#calculator-message').text(s);
 		}
 	});
-	
+
 	/* Le bouton qui ouvre/ferme la partie à droite */
 	$('#calculator-keyboard .help').click(function() {
 		$('body').toggleClass('help');
@@ -548,4 +548,15 @@ $(function() {
 			input.value = $(event.target).text();
 	});
 
+	// Une fois la page chargée, on met en place le service worker qui gère le cache
+	if ('serviceWorker' in navigator && navigator.onLine) {
+		var href = window.location.href.replace('webapps-calculator.html', 'webapps-calculator-sw.js');
+		navigator.serviceWorker.register(href).then(function(registration) {
+			// Registration was successful
+			console.log('ServiceWorker registration successful with scope: ', registration.scope);
+		}, function(err) {
+			// registration failed :(
+			console.log('ServiceWorker registration failed: ', err);
+		});
+	}
 });

@@ -8,15 +8,18 @@ If((1+Pi == acos(-1) + (-2) + 3) == true, "OK", "KO")
 
 ## Présentation
 
-[Cette application](http://techgp.fr/webapps/webapps-calculator.html) écrite en HTML5, JavaScript et CSS3 vous donnera accès à une calculatrice directement dans votre navigateur.
+[Cette application](https://techgp.fr/webapps/webapps-calculator.html) écrite en HTML5, JavaScript et CSS3 vous donnera accès à une calculatrice directement dans votre navigateur.
 
 Les liens suivants ont été utiles pour cette application :
 
 - [Parsing Expressions by Recursive Descent](http://www.engr.mun.ca/~theo/Misc/exp_parsing.htm), un formidable article qui propose une méthode simple à implémenter pour créer un parseur... et qui a mené à l'écriture du parseur utilisé ici.
 - [jsep](http://jsep.from.so/), pour JavaScript Expression Parser, sous licence MIT, qui été utilisé jusqu'au 22/05/2016 pour l'analyse des formules. L'API comme le code sont simples à comprendre.
-- [jQuery 3.2.1](http://jquery.com/) sous licence MIT
-- [moment.js 2.18.1](http://momentjs.com/) sous licence MIT
+- [jQuery 3.3.1](https://jquery.com/) sous licence MIT
+- [moment.js 2.21.0](https://momentjs.com/) sous licence MIT
 - [ECB](http://www.ecb.europa.eu/stats/exchange/eurofxref/html/index.en.html) qui utilisé dans le convertisseur monétaire pour obtenir des taux de change quotidien
+
+L'application devrait fonctionner correctement est mode déconnecté grâce aux **Service Workers** sous Chrome, Firefox et [d'autres bientôt](https://caniuse.com/#search=service+worker).
+Plus d'infos chez [Google](https://developers.google.com/web/fundamentals/primers/service-workers/) ou [Mozilla](https://developer.mozilla.org/en-US/docs/Web/API/Service_Worker_API/Using_Service_Workers).
 
 ## Captures d'écran
 
@@ -156,13 +159,16 @@ Ce projet est distribué sous licence MIT, reproduite dans le fichier LICENSE ic
 - ajout des méthodes "reduce" et "reduceAll" pour simplifier les expressions
 - ajout de l'option "dateUtc" pour choisir entre "moment(...)" ou "moment.utc(...)"
 
+2018-04-07
+- mise à jour de jQuery (3.2.1 en 3.3.1) et Moment.js (2.18.1 en 2.21.0)
+- utilisation des Service Workers pour la mise en cache au lieu de [Application Cache](https://developer.mozilla.org/fr/docs/Utiliser_Application_Cache)
+
 ## TODO
 
 - permettre de choisir les "literalTypes" (fusion literal literaltype)
 - casser la récursivité
 - améliorer "reduceAll" pour être progressif (par exemple pour la fonction "si")
 - améliorer "reduce" pour détecter les variables (par exemple dans les opérateurs ++ et --)
-- passer en ServiceWorker pour la gestion du cache plutôt que AppCache
 - support de la notation 2.1e3 pour 2 * 10^3 
 - vérification des paramètres pour les fonctions et les opérateurs
 - ajout de +ror, +rol (operator décallage de bit avec rotation), présents dans la calculette windows
