@@ -1,5 +1,6 @@
 var languages = {
 	'fr': {
+		'Placeholder': 'Calculatrice',
 		'sqrt': 'racine',
 		'pow': 'puissance',
 		'if': 'si',
@@ -13,6 +14,7 @@ var languages = {
 		'Expecting a value but found "%1" at position %0': '"%1" trouvé mais une valeur était attendue à la position %0',
 	},
 	'en': {
+		'Placeholder': 'Calculator',
 		'convert': 'conv',
 		'random': 'rand',
 	}
@@ -379,6 +381,8 @@ $(function() {
 		}, reject);
 	});
 
+	input.placeholder = lang('Placeholder');
+
 	// Traduire si demandé le texte des boutons
 	$('button').each(function(index, button) {
 		var translation = language[$(button).text()];
@@ -447,12 +451,13 @@ $(function() {
 	});
 	/* Une autre manière de lancer le calcul = appuyer sur "entrée" */
 	$(input).on('keypress', function(event) {
-		if ((event.keyCode || event.which) === 13)
+		if (event.which === 13)
 			calculate();
 	});
 
+	/* Reprendre la dernière formulaire quand on appuie sur la flêche du haut */
 	$(document.body).on('keyup', function(event) {
-		if (event.keyCode === 38) {
+		if (event.which === 38) {
 			var s = input.value;
 			input.value = $('#calculator-message').text();
 			$('#calculator-message').text(s);
@@ -487,7 +492,7 @@ $(function() {
 		}
 	});
 
-	/* Le bouton d'inversion du signe */
+	/* Le bouton d'inversion du signe +- */
 	$('#calculator-keyboard .sign').click(function() {
 		var val = input.value.trim();
 		if (val && val.charAt(0) === '-')
@@ -498,7 +503,7 @@ $(function() {
 			input.value = '-' + val;
 	});
 
-	/* Le bouton d'inversion du signe */
+	/* Le bouton 1/x */
 	$('#calculator-keyboard .inverse').click(function() {
 		// Pour savoir s'il faut ajouter  ou supprimer les "(" ")" en plus de "1/", on tente de parser
 		var val = input.value, tree;
@@ -542,7 +547,7 @@ $(function() {
 		insert('mem');
 	});
 
-	/* En tappant sur la dernière formule, on la recharge dans la zone d'édition */
+	/* En tapant sur la dernière formule, on la recharge dans la zone d'édition */
 	$('#calculator-message').click(function(event) {
 		if ($(document.body).hasClass('success'))
 			input.value = $(event.target).text();

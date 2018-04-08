@@ -3,7 +3,7 @@
 A calculator application with usual mathematical features, extendable function support and unit conversion.
 
 ```Example
-If((1+Pi == acos(-1) + (-2) + 3) == true, "OK", "KO")
+If((1+Pi == acos(-1) -2 + (1.5+1.5)) == true, "OK", "KO")
 ```
 
 ## Présentation
@@ -73,7 +73,7 @@ Ce projet est distribué sous licence MIT, reproduite dans le fichier LICENSE ic
 - ajout de noms secondaires pour les unités (par exemple masse atomique = dalton = Da = u = uma)
 - intégration d'une [pull request](soney/jsep#23) pour personnaliser les "literals" (pi par exemple)
 - intégration d'une [pull request](soney/jsep#27) pour corriger les opérateurs unaires
-- intégration d'une [pull request](soney/jsep#17) pour permettre de saisir des nombres en héxa (0x12 par exemple)
+- intégration d'une [pull request](soney/jsep#17) pour permettre de saisir des nombres en héxadécimal (0x12 par exemple)
 - sur le même principe, permettre de saisir des nombres en binaire (0b1100 = 12 par exemple) ou en octal (0o12 = 10 par exemple)
 
 2016-05-22
@@ -84,13 +84,13 @@ Ce projet est distribué sous licence MIT, reproduite dans le fichier LICENSE ic
 - remplacement de [JSEP](http://jsep.from.so/) par un parseur fait maison, construit après lecture de l'article [Parsing Expressions by Recursive Descent](http://www.engr.mun.ca/~theo/Misc/exp_parsing.htm)
 
 2016-05-30
-- restaurer le support des chaines de caractères (cf Literal et next())
+- restaurer le support des chaînes de caractères (cf Literal et next())
 - corriger l'affichage du résultat si "false" (n'affiche rien pour le moment)
 - terminer la traduction de "calculator.js" en anglais
-- amélioration de "calculator.format" pour que les litéraux repenne la valeur saisie telle quelle
+- amélioration de "calculator.format" pour que les littéraux reprennent la valeur saisie telle quelle
 
 2016-06-04
-- correction d'un bug sur l'évaluation de litéraux que Javascript assimile à faux (le nombre 0, le texte vide)
+- correction d'un bug sur l'évaluation de littéraux que Javascript assimile à faux (le nombre 0, le texte vide)
 - homogénéisation du clavier de la calculatrice avec les opérateurs et fonctions du calculateur
 - ajout de "1/x" (inverse), "e" (Euler's number), "³" (cubic), "cbrt" (cubic root), "!" (factorielle) et "atan2" (atan2(x, y) = atan(x/y))
 
@@ -107,11 +107,11 @@ Ce projet est distribué sous licence MIT, reproduite dans le fichier LICENSE ic
 2017-05-01
 - utilisation de Promise pour les calculs afin de permettre l'intégration de fonctions asynchrones, comme par exemple pour la conversion monétaire
 - réorganisation du code pour la fonction de conversion, notamment pour la partie concernant les conversions monétaires
-- suppression des liens vers Wikipédia (fonction obscure et en plus vers Wikipedia FR uniquement)
+- suppression des liens vers Wikipédia (fonction obscure et en plus vers Wikipédia FR uniquement)
 
 2017-05-04
 - ajout du support des dates et/ou des heures (nécessite "moment.js")
-- refactoring de l'interprétation des litéraux (suite à l'ajout des dates/heures)
+- réécriture de l'interprétation des littéraux (suite à l'ajout des dates/heures)
 - correction de la gestion des paramètres optionnels "undefined" dans "eval" et "evalAll"
 - correction de la traduction des opérateurs car ce sont des mots réservés de la syntaxe
 
@@ -133,16 +133,16 @@ Ce projet est distribué sous licence MIT, reproduite dans le fichier LICENSE ic
 - optimisation des opérateurs && et || pour s'arrêter dès que possible (un "false" pour && ou un "true" pour ||)
 
 2017-05-19
-- ajout du support des variables (en fait des litéraux donc "value" est accessible via getter / setter au lieu d'une valeur fixe)
+- ajout du support des variables (en fait des littéraux donc "value" est accessible via getter / setter au lieu d'une valeur fixe)
 - ajout d'une variable "mem" pour conserver (via "MS") ou récupérer (via "MR") une valeur en mémoire dans la calculatrice
 - correction des opérateurs "=" (affectation), "++" et "--" (postfix ou prefix) qui manipulent des variables
-- support de la flêche vers le haut pour éditer la formule précédemment calculée
+- support de la flèche vers le haut pour éditer la formule précédemment calculée
 
 2017-05-21
 - mise à jour de jQuery (2.2.4 en 3.2.1) et moment.js (2.15.0 en 2.18.1)
 
 2017-05-30
-- création des méthodes addLiteralEntry, addFunctionEntry et addOperatorEntry pour pouvoir créer soit-même les litéraux, fonctions et opérateurs sans connaitre le fonctionnement interne de Calculator
+- création des méthodes addLiteralEntry, addFunctionEntry et addOperatorEntry pour pouvoir créer soit-même les littéraux, fonctions et opérateurs sans connaître le fonctionnement interne de Calculator
 
 2017-07-15
 - correction d'un bug dans l'exécution des fonctions sans paramètre (calculator.evalAll ne répondait pas)
@@ -151,8 +151,8 @@ Ce projet est distribué sous licence MIT, reproduite dans le fichier LICENSE ic
 
 2017-09-12
 - intégration de Node.js, Grunt et JSHint pour améliorer le code JS
-- renommage de "eval" en "calculate" pour éviter les warning de JSHint "eval can be harmful."
-- renommage de "evalAll" en "calculateAll" par cohérence par "eval"=>"calculate"
+- changement de "eval" en "calculate" pour éviter les warning de JSHint "eval can be harmful."
+- changement de "evalAll" en "calculateAll" par cohérence par "eval"=>"calculate"
 
 2018-02-21
 - 2 contributions de [jsaintyv](https://github.com/jsaintyv)
@@ -164,6 +164,12 @@ Ce projet est distribué sous licence MIT, reproduite dans le fichier LICENSE ic
 - utilisation des Service Workers pour la mise en cache au lieu de [Application Cache](https://developer.mozilla.org/fr/docs/Utiliser_Application_Cache)
 - création de la classe CalculatorTree pour formaliser le résultat de Calculator.parse
 
+2018-04-08
+- correction des expressions rationnelles pour préciser le début et la fin de l'expression
+- correction d'un warning sous Edge sur la fermeture du tag "input"
+- traduction du placeholder en haut : "Calculator" (anglais) ou "Calculatrice" (français)
+- abandon de "keyCode" (IE <= 8). NB: pas de passage sur ".key" car hétérogène : Edge=Up, Firefox=ArrowUp par exemple)
+
 ## TODO
 
 - permettre de choisir les "literalTypes" (fusion literal literaltype)
@@ -172,6 +178,6 @@ Ce projet est distribué sous licence MIT, reproduite dans le fichier LICENSE ic
 - améliorer "reduce" pour détecter les variables (par exemple dans les opérateurs ++ et --)
 - support de la notation 2.1e3 pour 2 * 10^3 
 - vérification des paramètres pour les fonctions et les opérateurs
-- ajout de +ror, +rol (operator décallage de bit avec rotation), présents dans la calculette windows
+- ajout de +ror, +rol (operator décalage de bit avec rotation), présents dans la calculette windows
 - saisie des angles en radian/degré/grade
 - recherche ?

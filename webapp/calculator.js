@@ -482,15 +482,15 @@ Calculator.prototype.checkReady = function() {
 			return token.substring(1, token.length - 1).replace('\\"', '"');
 	});
 	// integer in hexadecimal format support
-	addLiteralForRegExp(/0x[0-9a-fA-F]+/, function(token) { return parseInt(token.substring(2), 16); });
+	addLiteralForRegExp(/^0x[0-9a-fA-F]+$/, function(token) { return parseInt(token.substring(2), 16); });
 	// integer in octal format support
-	addLiteralForRegExp(/0o[0-7]+/, function(token) { return parseInt(token.substring(2), 8); });
+	addLiteralForRegExp(/^0o[0-7]+$/, function(token) { return parseInt(token.substring(2), 8); });
 	// integer in binary format support
-	addLiteralForRegExp(/0b[0-1]+/, function(token) { return parseInt(token.substring(2), 2); });
+	addLiteralForRegExp(/^0b[0-1]+$/, function(token) { return parseInt(token.substring(2), 2); });
 	// float in decimal format support
-	addLiteralForRegExp(/\d+\.\d+/, function(token) { return parseFloat(token); });
+	addLiteralForRegExp(/^\d+\.\d+$/, function(token) { return parseFloat(token); });
 	// integer in decimal format support
-	addLiteralForRegExp(/\d+/, function(token) { return parseInt(token); });
+	addLiteralForRegExp(/^\d+$/, function(token) { return parseInt(token); });
 };
 
 /**
