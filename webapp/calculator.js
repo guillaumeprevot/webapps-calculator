@@ -13,6 +13,8 @@
  * - the "hexadecimal" type support understands '0x110' as 272 integer value
  * - the "string" type support understands '"toto"' (with quotes) as the string "toto"
  * - the "date" type support understands '"2018/04/13"' (with quotes) as the date 13th April 2018
+ * - the "time" type support understands '"13:50"' (with quotes) as the time 1:50 PM
+ * - the "datetime" type support understands '"2018/04/13 13:50"' (with quotes) as the date/time 13th April 2018 at 1:50 PM
  *
  * The list of type support is user-defined : some may use only integer, some may use different date format, ...
  *
@@ -20,10 +22,11 @@
  * @param {Function} parse - a method receiving a token and returning either the corresponding value (if supported) or null (if unknown)
  * @param {Function} format - a method receiving a supported value (or null), and returning the corresponding token
  */
-function CalculatorType(name, parse, format) {
+function CalculatorType(name, parse, format, check) {
 	this.name = name;
 	this.parse = parse;
 	this.format = format;
+	this.check = check;
 }
 
 /**
@@ -250,8 +253,8 @@ function Calculator() {
  * @see CalculatorType
  * @see Calculator.prototype.addTypeEntry
  */
-Calculator.prototype.addType = function(name, parse, format) {
-	this.addTypeEntry(new CalculatorType(name, parse, format));
+Calculator.prototype.addType = function(name, parse, format, check) {
+	this.addTypeEntry(new CalculatorType(name, parse, format, check));
 };
 
 /**
@@ -280,16 +283,20 @@ Calculator.prototype.addDefaultTypes = function(lang) {
 			return null;
 	}, function(v) {
 		return nullToken;
+	}, function(v) {
+		return v === null;
 	});
 
 	// Add support for boolean values
-	calculator.addType('null', function(t) {
+	calculator.addType('boolean', function(t) {
 		if (t === trueToken)
 			return true;
 		if (t === falseToken)
 			return false;
 	}, function(v) {
 		return !v ? falseToken : trueToken;
+	}, function(v) {
+		return v === true || v === false;
 	});
 
 	// Add support for dates, times or datetimes using moment
@@ -314,6 +321,10 @@ Calculator.prototype.addDefaultTypes = function(lang) {
 			}
 		}, function(v) {
 			return moment(v).format(formatString);
+		}, function(v) {
+			return (typeof v === 'object')
+				&& (hasDate === v.hasOwnProperty('year'))
+				&& (hasTime === v.hasOwnProperty('hour'));
 		});
 	}
 	addMoment('datetime', true, '"YYYY/MM/DD HH:mm"', true, true);
@@ -326,15 +337,19 @@ Calculator.prototype.addDefaultTypes = function(lang) {
 			return token.substring(1, token.length - 1).replace('\\"', '"');
 	}, function(value) {
 		return '"' + value.replace('"', '\\"') + '"';
+	}, function(v) {
+		return typeof v === 'string';
 	});
 
 	// Add support for different number notations using rational expression
-	function addRegExp(name, regexp, parse, format) {
+	function addRegExp(name, regexp, parse, format, check) {
 		calculator.addType(name, function(token) {
 			if (regexp.test(token))
 				return parse(token);
 		}, function(value) {
 			return format(value);
+		}, check || function(v) {
+			return false;
 		});
 	}
 	addRegExp('hexadecimal', /^0x[0-9a-fA-F]+$/,
@@ -348,7 +363,8 @@ Calculator.prototype.addDefaultTypes = function(lang) {
 			function(value) { return '0b' + value.toString(2); });
 	addRegExp('float', /^\d+\.\d+$/,
 			function(token) { return parseFloat(token); },
-			function(value) { return value.toString(); });
+			function(value) { return value.toString(); },
+			function(value) { return typeof value === 'number'; }); // all numbers defaults to "float" type
 	addRegExp('integer', /^\d+$/,
 			function(token) { return parseInt(token); },
 			function(value) { return value.toFixed(0); });

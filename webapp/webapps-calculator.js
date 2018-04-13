@@ -409,7 +409,10 @@ $(function() {
 			//console.log(calculator.format(tree));
 			calculator.calculate(tree, function(output) {
 				// console.log(output);
-				input.value = (output === null) ? 'null' : (typeof output === 'undefined') ? '' : output.toString();
+				if (typeof output === 'undefined')
+					input.value = '';
+				else
+					input.value = calculator.types.find(function(t) { return t.check(output); }).format(output);
 				setMessage(val, false);
 			}, function(reason) {
 				console.log(reason);
@@ -521,15 +524,15 @@ $(function() {
 		try {
 			tree = calculator.parse(val);
 			// Si la formule est 1 / xxx
-			if (tree.type === 'binary' && tree.token === '/' && tree.left.type === 'literal' && tree.left.value === 1) {
+			if (tree.kind === 'binary' && tree.token === '/' && tree.left.kind === 'constant' && tree.left.value === 1) {
 				// On ne gardera que xxx, en retirant les éventuelles parenthèses
-				tree = (tree.right.type === 'grouping') ? tree.right.left : tree.right;
-				// La nouvelle formule est reformattée correctement
+				tree = (tree.right.kind === 'grouping') ? tree.right.left : tree.right;
+				// La nouvelle formule est récrite correctement
 				input.value = calculator.format(tree);
 				return;
 			}
 			// Si la formule n'est pas 1 / xxx, il faudra inverser mais on vérifie déjà s'il faut des parenthèses
-			if (tree.type === 'binary')
+			if (tree.kind === 'binary')
 				input.value = '1/(' + calculator.format(tree) + ')';
 			else
 				input.value = '1/' + calculator.format(tree);
