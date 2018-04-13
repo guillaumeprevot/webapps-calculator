@@ -275,13 +275,13 @@ Calculator.prototype.addTypeEntry = function(entry) {
  */
 Calculator.prototype.addDefaultTypes = function(lang) {
 	var calculator = this;
-	var nullToken = lang('null');
-	var trueToken = lang('true');
-	var falseToken = lang('false');
+	var nullToken = lang('null').toLowerCase();
+	var trueToken = lang('true').toLowerCase();
+	var falseToken = lang('false').toLowerCase();
 
 	// Add support for null values
 	calculator.addType('null', function(t) {
-		if (t === nullToken)
+		if (t.toLowerCase() === nullToken)
 			return null;
 	}, function(v) {
 		return nullToken;
@@ -291,9 +291,9 @@ Calculator.prototype.addDefaultTypes = function(lang) {
 
 	// Add support for boolean values
 	calculator.addType('boolean', function(t) {
-		if (t === trueToken)
+		if (t.toLowerCase() === trueToken)
 			return true;
-		if (t === falseToken)
+		if (t.toLowerCase() === falseToken)
 			return false;
 	}, function(v) {
 		return !v ? falseToken : trueToken;
