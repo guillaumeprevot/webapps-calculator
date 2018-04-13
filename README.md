@@ -176,6 +176,7 @@ Ce projet est distribué sous licence MIT, reproduite dans le fichier LICENSE ic
 - suppression de "checkReady", "literalTypes", "dateUtc", "dateFormat", "timeFormat" et "datetimeFormat" qui ne servent plus
 - amélioration des commentaires
 - amélioration de Calculator.reduce (plus courte mais devrait de toute façon bientôt disparaître)
+- modification des types "date", "time" et "datetime" qui manipulent des objets {[year,month,date],[hour,minute,second]} au lieu de moment
 
 ## TODO
 
@@ -184,6 +185,7 @@ Ce projet est distribué sous licence MIT, reproduite dans le fichier LICENSE ic
 - casser la récursivité
 - améliorer "reduceAll" pour être progressif (par exemple pour la fonction "si")
 - améliorer "reduce" pour détecter les variables (par exemple dans les opérateurs ++ et --)
+- détecter les litéraux modifiables avec le test : typeof Object.getOwnPropertyDescriptor(literal, 'value').set === 'function'
 - support de la notation 2.1e3 pour 2 * 10^3
 - vérification des paramètres pour les fonctions et les opérateurs
 - ajout de +ror, +rol (operator décalage de bit avec rotation), présents dans la calculette windows

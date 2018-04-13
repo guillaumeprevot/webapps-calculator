@@ -23,7 +23,7 @@ self.addEventListener('install', function(event) {
 		return cache.addAll(baseCacheContent).then(function() {
 			console.log('Service Worker : data cached');
 		});
-	}))
+	}));
 });
 
 self.addEventListener('activate', function(event) {

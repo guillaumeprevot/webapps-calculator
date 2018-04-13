@@ -293,20 +293,32 @@ Calculator.prototype.addDefaultTypes = function(lang) {
 	});
 
 	// Add support for dates, times or datetimes using moment
-	function addMoment(name, utc, format) {
+	function addMoment(name, utc, format, hasDate, hasTime) {
 		var momentMethod = utc ? moment.utc : moment;
 		var formatString = lang(format);
 		calculator.addType(name, function(t) {
 			var m = momentMethod(t, formatString, true/*strict*/);
-			if (m.isValid())
-				return m;
-		}, function(m) {
-			return m.format(formatString);
+			if (m.isValid()) {
+				var r = {};
+				if (hasDate) {
+					r.year = m.year();
+					r.month = m.month();
+					r.date = m.date();
+				}
+				if (hasTime) {
+					r.hour = m.hour();
+					r.minute = m.minute();
+					r.second = m.second();
+				}
+				return r;
+			}
+		}, function(v) {
+			return moment(v).format(formatString);
 		});
 	}
-	addMoment('datetime', true, '"YYYY/MM/DD HH:mm"');
-	addMoment('date', true, '"YYYY/MM/DD"');
-	addMoment('time', true, '"HH:mm"');
+	addMoment('datetime', true, '"YYYY/MM/DD HH:mm"', true, true);
+	addMoment('date', true, '"YYYY/MM/DD"', true, false);
+	addMoment('time', true, '"HH:mm"', false, true);
 
 	// Add support for strings AFTER date/time because they are a special kind of strings
 	calculator.addType('string', function(token) {
@@ -436,7 +448,7 @@ Calculator.prototype.addDefaultFunctions = function(lang) {
 	if (typeof moment !== 'undefined') {
 		calculator.addFunction(lang('formatDate'), lang('date, format'), function(context, resolve, reject, date, format) {
 			context.calculateAll([date, format], function(results) {
-				resolve(results[0].format(results[1]));
+				resolve(moment(results[0]).format(results[1]));
 			}, reject);
 		});
 	}
