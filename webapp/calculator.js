@@ -43,11 +43,13 @@ function CalculatorType(name, parse, format, check) {
  * );
  *
  * @param {String} token - the token, as seen in formula
+ * @param {String} type - the type name of the value returned by this literal ('null', 'boolean', 'string', 'float', ...)
  * @param {*} value - the corresponding value (or the getter for a variable), used to evaluate the result
  * @param {Function} setter - the setter, if provided, for a variable called "token"
  */
-function CalculatorLiteral(token, value, setter) {
+function CalculatorLiteral(token, type, value, setter) {
 	this.token = token;
+	this.type = type;
 	if (typeof value === 'function') {
 		Object.defineProperty(this, 'value', {
 			get: value, // the getter
@@ -376,8 +378,8 @@ Calculator.prototype.addDefaultTypes = function(lang) {
  * @see CalculatorLiteral
  * @see Calculator.prototype.addLiteralEntry
  */
-Calculator.prototype.addLiteral = function(token, value, setter) {
-	this.addLiteralEntry(new CalculatorLiteral(token, value, setter));
+Calculator.prototype.addLiteral = function(token, type, value, setter) {
+	this.addLiteralEntry(new CalculatorLiteral(token, type, value, setter));
 };
 
 /**
@@ -396,14 +398,22 @@ Calculator.prototype.addLiteralEntry = function(entry) {
  */
 Calculator.prototype.addDefaultLiterals = function(lang) {
 	var calculator = this;
-	function add(token, value, setter) {
-		calculator.addLiteral(lang(token), value, setter);
-	}
-	add('pi', Math.PI);
-	add('e', Math.E);
+	calculator.addLiteral(lang('pi'), 'float', Math.PI);
+	calculator.addLiteral(lang('e'), 'float', Math.E);
 	// The "mem" literal
 	var mem = null;
-	add('mem', function() { return mem; }, function(newValue) { mem = newValue; });
+	var memLiteral = new CalculatorLiteral(
+		lang('mem'),
+		'null', // type is 'null' at first because mem is null
+		function() {
+			return mem;
+		},
+		function(newValue) {
+			mem = newValue;
+			memLiteral.type = calculator.types.find(function(t) { return t.check(newValue); }).name;
+			console.log(memLiteral);
+		});
+	calculator.addLiteralEntry(memLiteral);
 };
 
 /**

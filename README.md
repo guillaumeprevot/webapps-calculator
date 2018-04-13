@@ -178,6 +178,7 @@ Ce projet est distribué sous licence MIT, reproduite dans le fichier LICENSE ic
 - amélioration de Calculator.reduce (plus courte mais devrait de toute façon bientôt disparaître)
 - modification des types "date", "time" et "datetime" pour manipuler des objets {[year,month,date],[hour,minute,second]} au lieu de moment
 - ajout de CalculatorType.check pour déterminer le type d'une valeur et la formatter correctement
+- ajout de CalculatorLiteral.type pour associer un type à chaque valeur (NB: dans le cas de 'mem', le type change dynamiquement)
 
 ## TODO
 
