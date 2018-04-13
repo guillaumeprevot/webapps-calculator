@@ -170,13 +170,21 @@ Ce projet est distribué sous licence MIT, reproduite dans le fichier LICENSE ic
 - traduction du placeholder en haut : "Calculator" (anglais) ou "Calculatrice" (français)
 - abandon de "keyCode" (IE <= 8). NB: pas de passage sur ".key" car hétérogène : Edge=Up, Firefox=ArrowUp par exemple)
 
+2018-04-13
+- ajout des CalculatorType pour permettre de choisir les types de données supportées par le calculateur
+- renommage de CalculatorTree.type en CalculatorTree.kind suite à l'ajout des CalculatorType
+- suppression de "checkReady", "literalTypes", "dateUtc", "dateFormat", "timeFormat" et "datetimeFormat" qui ne servent plus
+- amélioration des commentaires
+- amélioration de Calculator.reduce (plus courte mais devrait de toute façon bientôt disparaître)
+
 ## TODO
 
-- permettre de choisir les "literalTypes" (fusion literal literaltype)
+- corriger la récupération de la langue car sous Edge, navigator.language retourne "fr-FR"
+- gérer le cache de "https://techgp.fr:11215/moneyrates" par le Service Worker (1 fetch par jour)
 - casser la récursivité
 - améliorer "reduceAll" pour être progressif (par exemple pour la fonction "si")
 - améliorer "reduce" pour détecter les variables (par exemple dans les opérateurs ++ et --)
-- support de la notation 2.1e3 pour 2 * 10^3 
+- support de la notation 2.1e3 pour 2 * 10^3
 - vérification des paramètres pour les fonctions et les opérateurs
 - ajout de +ror, +rol (operator décalage de bit avec rotation), présents dans la calculette windows
 - saisie des angles en radian/degré/grade

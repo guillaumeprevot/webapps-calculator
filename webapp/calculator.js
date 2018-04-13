@@ -1,14 +1,42 @@
 /**
- * A literal is a token, associated with a value (for instance : "true", "false", "null", "pi", "e"... ").
+ * Most of the time, calculators deal with numbers. But more complex calculators could support
+ * numbers in hexadecimal, octal or even binary notation. Even more complex expressions could
+ * use boolean, strings, date or times...
  *
- * Example for "true" literal :
- * new CalculatorLiteral('true', true);
+ * A type support is registered in the parser to create a new way to parse/format values from/into tokens :
+ * - the "boolean" type support understands 'true'/'false' as boolean values true/false
+ * - the "null" type support understands 'null' as the null value
+ * - the "integer" type support understands '0', '1', '2', '100', ... as their equivalent integer values
+ * - the "decimal" type support understands '0.5' or '123.45' as their equivalent float values
+ * - the "binary" type support understands '0b110' as 6 integer value
+ * - the "octal" type support understands '0o110' as 72 integer value
+ * - the "hexadecimal" type support understands '0x110' as 272 integer value
+ * - the "string" type support understands '"toto"' (with quotes) as the string "toto"
+ * - the "date" type support understands '"2018/04/13"' (with quotes) as the date 13th April 2018
  *
- * Example for a variable called "v" :
- * var v = 0;
- * new CalculatorLiteral('v',
- *    function() { return v; },
- *    function(newValue) { v = newValue; }
+ * The list of type support is user-defined : some may use only integer, some may use different date format, ...
+ *
+ * @param {String} name - an internal name for the type support, to keep track of the input value (is the integer in decimal or octal format ?)
+ * @param {Function} parse - a method receiving a token and returning either the corresponding value (if supported) or null (if unknown)
+ * @param {Function} format - a method receiving a supported value (or null), and returning the corresponding token
+ */
+function CalculatorType(name, parse, format) {
+	this.name = name;
+	this.parse = parse;
+	this.format = format;
+}
+
+/**
+ * A literal is a token, associated with constants (like "pi" or "e") or variables (like "mem").
+ *
+ * Example for "pi" literal :
+ * new CalculatorLiteral('pi', Math.PI);
+ *
+ * Example for "mem" variable :
+ * var mem = 0;
+ * new CalculatorLiteral('mem',
+ *    function() { return mem; },
+ *    function(newValue) { mem = newValue; }
  * );
  *
  * @param {String} token - the token, as seen in formula
@@ -46,7 +74,7 @@ function CalculatorLiteral(token, value, setter) {
  *   }, reject);
  * })
  *
- * Example for an asynchonous calculation function :
+ * Example for an asynchronous calculation function :
  * new CalculatorFunction("myAsyncFunc", "a, b", function(context, resolve, reject, a, b) {
  *   context.calculateAll([a, b], function(params) {
  *   	myAsyncFunc(params)
@@ -69,10 +97,10 @@ function CalculatorFunction(token, params, calculate) {
  * An operator is a token used to transforme a value (unary) or to combine two values (binary) :
  * - ! (logical not) is a prefix unary operator (i.e. !true === false)
  * - ² (square) is a postfix unary operator (i.e. 2² === 4)
- * - - (substract) is usually a binary left-associative operator (i.e. 3-2-1 === (3-2)-1) but is also an unary operator
+ * - - (subtract) is usually a binary left-associative operator (i.e. 3-2-1 === (3-2)-1) but is also an unary operator
  * - ** (exponentiation) is a binary right-associative operator (i.e. 2^2^3 === 2^(2^3))
  *
- * Example for the substraction binay operator :
+ * Example for the subtraction binary operator :
  * new CalculatorOperator("-", 11, 'left', function(context, resolve, reject, a, b) {
  *   context.calculateAll([a, b], function(params) {
  *     resolve(params[0] - params[1]);
@@ -89,7 +117,7 @@ function CalculatorFunction(token, params, calculate) {
  * @param {String} token - the token, as seen in formula
  * @param {Number} precedence - the precedence of the operator (multiplication has greater precedence over addition)
  * @param {String} associativity - how to apply operator (can be "left" or "right" for binary operators and "prefix" or "postfix" for unary operators)
- * @param {Function} calculate - the function, used to evaluate the result, with signatrure calculate(context, resolve, reject, a[, b])
+ * @param {Function} calculate - the function, used to evaluate the result, with signature calculate(context, resolve, reject, a[, b])
  */
 function CalculatorOperator(token, precedence, associativity, calculate) {
 	this.token = token;
@@ -103,7 +131,7 @@ function CalculatorOperator(token, precedence, associativity, calculate) {
  *
  * @param {String} formula - the formula where error occurred
  * @param {Number} index - the position in the formula where error occurred
- * @param {Number} length - the optional length of the token where error occured
+ * @param {Number} length - the optional length of the token where error occurred
  * @param {String} message - the error message, that may contain parameters %0, %1, ...
  * @param {Array} params - the array of parameters, used to format
  */
@@ -115,7 +143,7 @@ function CalculatorError(formula, index, length, message, params) {
 	this.params = params;
 }
 
-/** Helper method to write formula to console and highlight the position where error occured */
+/** Helper method to write formula to console and highlight the position where error occurred */
 CalculatorError.prototype.console = function() {
 	// Show formula on console
 	console.log(this.formula);
@@ -129,7 +157,7 @@ CalculatorError.prototype.console = function() {
 	}
 };
 
-/** Helper method to hightlight in an editable input or textarea the position where the error occured */
+/** Helper method to highlight in an editable input or textarea the position where the error occurred */
 CalculatorError.prototype.select = function(input) {
 	input.focus();
 	if ('createTextRange' in input) {
@@ -162,11 +190,15 @@ CalculatorError.prototype.format = function(lang) {
 };
 
 /**
+ * This class represents the AST of an expression :
+ * - Calculator.parse transforms a string expression (a.k.a formula) into a CalculatorTree
+ * - Calculator.format transforms the CalculatorTree into an expression (a.k.a formula)
+ * - Calculator.calculate can compute the value of CalculatorTree
  *
- * @member {String} type - either 'constant', 'literal', 'array', 'grouping', 'binary', 'prefix', 'postfix' or 'function'.
+ * @member {String} kind - either 'constant', 'literal', 'array', 'grouping', 'binary', 'prefix', 'postfix' or 'function'.
  * @member {String} token - the symbol of an 'operator'/ 'function' or the formula that resulted to this 'constant' / 'literal'
  * @member {CalculatorLiteral} literal - the literal definition that resulted to this 'literal'
- * @member {CalculatorConstant} constant - the constant definition that resulted to this 'constant'
+ * @member {CalculatorType} type - the type of 'value' (if 'constant') of the expected evaluated value (for other kind of AST)
  * @member {*} value - the value of a 'constant'
  * @member {Array} params - the sub-elements of an 'array' or 'function'
  * @member {CalculatorTree} left - the first sub-element of a 'binary' operator or the single sub-element of a 'grouping' element or 'postfix' operator
@@ -175,10 +207,10 @@ CalculatorError.prototype.format = function(lang) {
  * @returns
  */
 function CalculatorTree(model) {
-	this.type = model.type;
+	this.kind = model.kind;
 	this.token = model.token;
 	this.literal = model.literal;
-	this.constant = model.constant;
+	this.type = model.type;
 	this.value = model.value;
 	this.params = model.params;
 	this.left = model.left;
@@ -188,38 +220,127 @@ function CalculatorTree(model) {
 /**
  * The calculator combines the grammar (~syntax) and the parser (parse/format/calculate)
  *
+ * @member {Array} types - the supported types (integers, floats, integers in hexadecimal notation, string, dates, boolean, ...)
  * @member {Map} literals - the map from token to literals accepted in the grammar
  * @member {Map} functions - the map from function's name to function accepted in the grammar
  * @member {Map} prefixOperators - the map from operator's token to prefix operator accepted in the grammar
  * @member {Map} postfixOperators - the map from operator's token to postfix operator accepted in the grammar
  * @member {Map} binaryOperators - the map from operator's token to binary operator accepted in the grammar
- * @member {Boolean} dateUtc - the "moment" flag to support date utc
- * @member {String} dateFormat - the "moment" format to support date literals
- * @member {String} timeFormat - the "moment" format to support time literals
- * @member {String} datetimeFormat - the "moment" format to support datetime literals
  *
- * @member {Array} literalTypes - the list of methods used to guess literal values like dates, numbers, hexa numbers, ...
  * @member {String} formula - the formula to parse
  * @member {Number} index - the current position during parsing, from 0 to formula.length
  * @member {Array} separators - a compact list of token separators, build from grammar to optimize parsing
  */
 function Calculator() {
+	this.types = [];
 	this.literals = {};
 	this.functions = {};
 	this.prefixOperators = {};
 	this.postfixOperators = {};
 	this.binaryOperators = {};
 
-	this.dateUtc = true;
-	this.dateFormat = '"YYYY/MM/DD"';
-	this.timeFormat = '"HH:mm"';
-	this.datetimeFormat = '"YYYY/MM/DD HH:mm"';
-
-	this.literalTypes = null;
 	this.formula = undefined;
 	this.index = undefined;
 	this.separators = undefined;
 }
+
+/**
+ * Helper method to support another type from from a name, a parse method and a format method.
+ *
+ * @see CalculatorType
+ * @see Calculator.prototype.addTypeEntry
+ */
+Calculator.prototype.addType = function(name, parse, format) {
+	this.addTypeEntry(new CalculatorType(name, parse, format));
+};
+
+/**
+ * Helper method to support another type.
+ *
+ * @param {CalculatorType} entry - the type of values to add support for
+ */
+Calculator.prototype.addTypeEntry = function(entry) {
+	this.types.push(entry);
+};
+
+/**
+ * Helper method to add default type supports (null, boolean, date/times, numbers, ...)
+ *
+ * @param {Function(String)->String} lang - a function to allow translation
+ */
+Calculator.prototype.addDefaultTypes = function(lang) {
+	var calculator = this;
+	var nullToken = lang('null');
+	var trueToken = lang('true');
+	var falseToken = lang('false');
+
+	// Add support for null values
+	calculator.addType('null', function(t) {
+		if (t === nullToken)
+			return null;
+	}, function(v) {
+		return nullToken;
+	});
+
+	// Add support for boolean values
+	calculator.addType('null', function(t) {
+		if (t === trueToken)
+			return true;
+		if (t === falseToken)
+			return false;
+	}, function(v) {
+		return !v ? falseToken : trueToken;
+	});
+
+	// Add support for dates, times or datetimes using moment
+	function addMoment(name, utc, format) {
+		var momentMethod = utc ? moment.utc : moment;
+		var formatString = lang(format);
+		calculator.addType(name, function(t) {
+			var m = momentMethod(t, formatString, true/*strict*/);
+			if (m.isValid())
+				return m;
+		}, function(m) {
+			return m.format(formatString);
+		});
+	}
+	addMoment('datetime', true, '"YYYY/MM/DD HH:mm"');
+	addMoment('date', true, '"YYYY/MM/DD"');
+	addMoment('time', true, '"HH:mm"');
+
+	// Add support for strings AFTER date/time because they are a special kind of strings
+	calculator.addType('string', function(token) {
+		if (token.length >= 2 && token[0] === '"' && token[token.length - 1] === '"')
+			return token.substring(1, token.length - 1).replace('\\"', '"');
+	}, function(value) {
+		return '"' + value.replace('"', '\\"') + '"';
+	});
+
+	// Add support for different number notations using rational expression
+	function addRegExp(name, regexp, parse, format) {
+		calculator.addType(name, function(token) {
+			if (regexp.test(token))
+				return parse(token);
+		}, function(value) {
+			return format(value);
+		});
+	}
+	addRegExp('hexadecimal', /^0x[0-9a-fA-F]+$/,
+			function(token) { return parseInt(token.substring(2), 16); },
+			function(value) { return '0x' + value.toString(16); });
+	addRegExp('octal', /^0o[0-7]+$/,
+			function(token) { return parseInt(token.substring(2), 8); },
+			function(value) { return '0o' + value.toString(8); });
+	addRegExp('binary', /^0b[0-1]+$/,
+			function(token) { return parseInt(token.substring(2), 2); },
+			function(value) { return '0b' + value.toString(2); });
+	addRegExp('float', /^\d+\.\d+$/,
+			function(token) { return parseFloat(token); },
+			function(value) { return value.toString(); });
+	addRegExp('integer', /^\d+$/,
+			function(token) { return parseInt(token); },
+			function(value) { return value.toFixed(0); });
+};
 
 /**
  * Helper method to add a literal from a token and a value (either constant or variable).
@@ -241,7 +362,7 @@ Calculator.prototype.addLiteralEntry = function(entry) {
 };
 
 /**
- * Helper method to add default literals true, false, null, pi.
+ * Helper method to add default literals "pi", "e" and "mem".
  *
  * @param {Function(String)->String} lang - a function to allow translation
  */
@@ -250,9 +371,6 @@ Calculator.prototype.addDefaultLiterals = function(lang) {
 	function add(token, value, setter) {
 		calculator.addLiteral(lang(token), value, setter);
 	}
-	add('true', true);
-	add('false', false);
-	add('null', null);
 	add('pi', Math.PI);
 	add('e', Math.E);
 	// The "mem" literal
@@ -280,7 +398,7 @@ Calculator.prototype.addFunctionEntry = function(entry) {
 };
 
 /**
- * Helper method to add default functions from javascript Math object, and an "if" function working like ".. ? ... : ..." opérator.
+ * Helper method to add default functions from javascript Math object, and an "if" function working like the "?:" operator.
  *
  * @param {Function(String)->String} lang - a function to allow translation
  */
@@ -447,62 +565,15 @@ Calculator.prototype.addDefaultOperators = function(lang) {
 	// add('.', 'left', binary(function(a, b) { return a[b]; })); // member access
 };
 
-Calculator.prototype.checkReady = function() {
-	var calculator = this;
-	if (calculator.literalTypes !== null)
-		return;
-	calculator.literalTypes = [];
-	function add(literalType) {
-		calculator.literalTypes.push(literalType);
-	}
-	function addLiteralForRegExp(expression, transform) {
-		add(function(token) {
-			if (expression.test(token))
-				return transform(token);
-		});
-	}
-	function addLiteralForDateTime(format) {
-		add(function(token) {
-			var m = calculator.dateUtc ? moment.utc(token, format, true/*strict*/) : moment(token, format, true/*strict*/);
-			if (m.isValid())
-				return m;
-		});
-	}
-	if (typeof moment !== 'undefined') {
-		// date/time support
-		addLiteralForDateTime(calculator.datetimeFormat);
-		// date support
-		addLiteralForDateTime(calculator.dateFormat);
-		// time support
-		addLiteralForDateTime(calculator.timeFormat);
-	}
-	// string support
-	add(function(token) {
-		if (token.length >= 2 && token[0] === '"' && token[token.length - 1] === '"')
-			return token.substring(1, token.length - 1).replace('\\"', '"');
-	});
-	// integer in hexadecimal format support
-	addLiteralForRegExp(/^0x[0-9a-fA-F]+$/, function(token) { return parseInt(token.substring(2), 16); });
-	// integer in octal format support
-	addLiteralForRegExp(/^0o[0-7]+$/, function(token) { return parseInt(token.substring(2), 8); });
-	// integer in binary format support
-	addLiteralForRegExp(/^0b[0-1]+$/, function(token) { return parseInt(token.substring(2), 2); });
-	// float in decimal format support
-	addLiteralForRegExp(/^\d+\.\d+$/, function(token) { return parseFloat(token); });
-	// integer in decimal format support
-	addLiteralForRegExp(/^\d+$/, function(token) { return parseInt(token); });
-};
-
 /**
  * This method tries to parse a formula into an abstract syntax tree (AST).
  * Then, you can use "format" or "calculate" methods, passing them the "parse" result AST.
  *
  * @param {String} formula - the formula to parse
- * @return {CalculatorTree} un objet représentant l'arbre syntaxique de la formule analysée
+ * @return {CalculatorTree} an object representing the expression
  */
 Calculator.prototype.parse = function(formula) {
 	var p;
-	this.checkReady();
 	this.formula = formula.trim();
 	this.index = 0;
 	this.separators = ['(', ')', '[', ']', ' '];
@@ -530,8 +601,10 @@ Calculator.prototype.parse = function(formula) {
  * @param {Object} tree - the tree to format into a string
  */
 Calculator.prototype.format = function(tree) {
-	switch (tree.type) {
-		case 'literal': // 1, 123.45, true, null, pi, ...
+	switch (tree.kind) {
+		case 'constant': // 1, 123.45, true, null, ...
+			return tree.type.format(tree.value);
+		case 'literal': // pi, mem, ...
 			return tree.token;
 		case 'array': // [ params ]
 			return '[' + tree.params.map(this.format.bind(this)).join(', ') + ']';
@@ -546,7 +619,7 @@ Calculator.prototype.format = function(tree) {
 		case 'function': // token ( params )
 			return tree.token + '(' + tree.params.map(this.format.bind(this)).join(', ') + ')';
 	}
-	throw Error('Invalid tree node type ' + tree.type, tree);
+	throw Error('Invalid tree node kind ' + tree.kind, tree);
 };
 
 /**
@@ -569,9 +642,12 @@ Calculator.prototype.calculate = function(tree, resolve, reject) {
 		resolve(undefined);
 		return;
 	}
-	switch (tree.type) {
-		case 'literal': // 1, 123.45, true, null, pi, ...
-			resolve((typeof tree.value !== 'undefined') ? tree.value : tree.literal.value);
+	switch (tree.kind) {
+		case 'constant': // 1, 123.45, true, null, ...
+			resolve(tree.value);
+			break;
+		case 'literal': // pi, mem, ...
+			resolve(tree.literal.value);
 			break;
 		case 'array': // [ params ]
 			this.calculateAll(tree.params, resolve, reject);
@@ -592,7 +668,7 @@ Calculator.prototype.calculate = function(tree, resolve, reject) {
 			this.functions[tree.token].calculate.apply(null, [this, resolve, reject].concat(tree.params));
 			break;
 		default:
-			reject(new Error('Invalid tree node type ' + tree.type, tree));
+			reject(new Error('Invalid tree node kind ' + tree.kind, tree));
 	}
 };
 
@@ -607,11 +683,11 @@ Calculator.prototype.calculateAll = function(params, resolve, reject) {
 	params.forEach(function(param, index) {
 		this.calculate(param, function(value) {
 			values[index] = value;
-			if (count === 1) // si c'est le dernier
-				resolve(values); // on a fini
-			count--; // on décrémente après
+			if (count === 1) // if this is the last one
+				resolve(values); // we're done
+			count--; // otherwise, decrement and continue "params" evaluation
 		}, function(error) {
-			count = 0; // pour être sûr de ne pas appeler "resolve" ensuite
+			count = 0; // setting "count" to 0 to ensure "resolve" is not called
 			reject(error);
 		});
 	}.bind(this));
@@ -621,7 +697,7 @@ Calculator.prototype.reduce = function(tree, resolve, reject) {
 	// Construit une literal temporaire sur la base d'un résultat.
 	function makeLiteral(v) {
 		var lit = new CalculatorLiteral('', v);
-		lit.type = 'literal';
+		lit.kind = 'literal';
 		return lit;
 	}
 
@@ -654,41 +730,22 @@ Calculator.prototype.reduce = function(tree, resolve, reject) {
 		return;
 	}
 
-	switch (tree.type) {
-		case 'literal': // 1, 123.45, true, null, pi, ...
-			if (typeof tree.value !== 'undefined')
-				resolve(tree.value);
-			else if (! tree.literal.notResolved)
+	switch (tree.kind) {
+		case 'constant': // 1, 123.45, true, null, ...
+			resolve(tree.value);
+			break;
+		case 'literal': // pi, mem, ...
+			if (! tree.literal.notResolved)
 				resolve(tree.literal.value);
 			else
 				resolve({ reduce: tree.token });
 			break;
 		case 'array': // [ params ]
 			this.reduceAll(tree.params, function(results) {
-				var x;
-
-				var allConstant = true;
-				for (x = 0; x < results.length; x++) {
-					if (! isConstant(results[x])) {
-						allConstant = false;
-						break;
-					}
-				}
-
-				if (allConstant) {
-					// On retourne le tableau calculé.
+				if (results.every(isConstant))
 					resolve(results);
-				} else {
-					// On renvoit une déclaration du tableau
-					var expression = tree.token  + '[';
-					for (x = 0; x < results.length; x++) {
-						if (x !== 0)
-							expression += ',';
-						expression += toExpression(results[x]);
-					}
-					expression += ']';
-					resolve({ reduce: expression });
-				}
+				else
+					resolve({ reduce: '[' + results.map(toExpression).join(',') + ']' });
 			}.bind(this), reject);
 			break;
 		case 'grouping': // ( ... )
@@ -702,70 +759,44 @@ Calculator.prototype.reduce = function(tree, resolve, reject) {
 		case 'binary': // left token right
 			this.reduce(tree.left, function(resultLeft) {
 				this.reduce(tree.right, function(resultRight) {
-					if (isConstant(resultLeft) && isConstant(resultRight)) {
+					if (isConstant(resultLeft) && isConstant(resultRight))
 						this.binaryOperators[tree.token].calculate(this, resolve, reject, makeLiteral(resultLeft), makeLiteral(resultRight));
-					} else {
-						var expression = toExpression(resultLeft) + tree.token + toExpression(resultRight);
-						resolve({ reduce: expression });
-					 }
+					else
+						resolve({ reduce: toExpression(resultLeft) + tree.token + toExpression(resultRight) });
 				}.bind(this), reject);
 			}.bind(this), reject);
 			break;
 		case 'prefix': // token right
 			this.reduce(tree.right, function(resultRight) {
-				if (isConstant(resultRight)) {
+				if (isConstant(resultRight))
 					//JEROME -- ou ++ ne devrait pas reduce.
 					this.prefixOperators[tree.token].calculate(this, resolve, reject, makeLiteral(resultRight));
-				} else {
+				else
 					//JEROME -- ou ++ ne devrait pas reduce.
-					var expression = tree.token + toExpression(resultRight);
-					resolve({ reduce: expression });
-				}
+					resolve({ reduce: tree.token + toExpression(resultRight) });
 			}.bind(this), reject);
 			break;
 		case 'postfix': // left token
 			this.reduce(tree.left, function(resultLeft) {
-				if (isConstant(resultLeft)) {
+				if (isConstant(resultLeft))
 					//JEROME -- ou ++ ne devrait pas reduce.
 					this.postfixOperators[tree.token].calculate(this, resolve, reject, makeLiteral(resultLeft));
-				} else {
+				else
 					//JEROME -- ou ++ ne devrait pas reduce.
-					var expression = toExpression(resultLeft) + tree.token;
-					resolve({ reduce: expression });
-				}
+					resolve({ reduce: toExpression(resultLeft) + tree.token });
 			}.bind(this), reject);
 			break;
 		case 'function': // token ( params )
-			// TODO le reduceAll des fonctions ne devrait pas réduire tout d'un coup (par exemple pour la fonction "si")
+			// JEROME les fonctions (comme "si") ne devraient pas toujours utiliser "reduceAll"
 			this.reduceAll(tree.params, function(results) {
-				var x;
-				var allConstant = true;
-				for (x = 0; x < results.length; x++) {
-					if (! isConstant(results[x])) {
-						allConstant = false;
-						break;
-					}
-				}
-
-				if (allConstant) {
-					var literalParams = results.map(function(o) {
-						return makeLiteral(o);
-					});
-					this.functions[tree.token].calculate.apply(null, [this, resolve, reject].concat(literalParams));
-				} else {
-					var expression = tree.token  + '(';
-					for (x = 0; x < results.length; x++) {
-						if (x !== 0)
-							expression += ',';
-						expression += toExpression(results[x]);
-					}
-					expression += ')';
-					resolve({ reduce: expression });
-				}
+				if (results.every(isConstant))
+					this.functions[tree.token].calculate.apply(null, [this, resolve, reject].concat(results.map(makeLiteral)));
+				else
+					resolve({ reduce: tree.token  + '(' + results.map(toExpression).join(',') + ')' });
 			}.bind(this), reject);
 			break;
 		default:
-			reject(new Error('Invalid tree node type ' + tree.type, tree));
+			reject(new Error('Invalid tree node kind ' + tree.kind, tree));
 	}
 };
 
@@ -780,11 +811,11 @@ Calculator.prototype.reduceAll = function(params, resolve, reject) {
 	params.forEach(function(param, index) {
 		this.reduce(param, function(value) {
 			values[index] = value;
-			if (count === 1) // si c'est le dernier
-				resolve(values); // on a fini
-			count--; // on décrémente après
+			if (count === 1) // if this is the last one
+				resolve(values); // we're done
+			count--; // otherwise, decrement and continue "params" evaluation
 		}, function(error) {
-			count = 0; // pour être sûr de ne pas appeler "resolve" ensuite
+			count = 0; // setting "count" to 0 to ensure "resolve" is not called
 			reject(error);
 		});
 	}.bind(this));
@@ -869,16 +900,17 @@ Calculator.prototype.expect = function(text) {
 };
 
 /**
- * La fonction retourne un arbre représentant l'interprétation de la formule.
+ * This function reads the formula and, if successful, returns the corresponding AST as a CalculatorTree
  *
- * Il y a différents types de noeuds :
- * - literal(token, value) : une valeur finale (feuille de l'arbre)
- * - array(params) : un tableau de valeurs entourées de [ et ] et séparées par ','
- * - grouping(left) : un expression entourée de ( et )
- * - binary(token, left, right) : un opérateur binaire avec la partie gauche et la partie droite
- * - prefix(right) : un opérateur unaire préfixe, avec la valeur à droite
- * - postfix(left) : un opérateur unaire postfixe, avec la valeur à gauche
- * - function(token, params) : une fonction dont token est le nom et params la liste des paramètres
+ * Different kind of tree :
+ * - constant(type, value) : a static value (and also a leaf)
+ * - literal(token, literal) : a token-backed value (also a leaf) but the value may be modifiable, asynchronous and/or impossible to reduce
+ * - array(params) : an array of 0..N sub-elements, separated by "," and surrounded by "[" and "]"
+ * - grouping(left) : a single sub-element, surrounded by "(" and ")" to deal with operator precedence
+ * - binary(token, left, right) : a binary operator "token" with left and right sub-element as operands
+ * - prefix(token, right) : an unary prefix operateur with a single "right" sub-element
+ * - postfix(token, left) : an unary postfix operateur with a single "left" sub-element
+ * - function(token, params) : a function using 0..B sub-elements, separated by "," and surrounded by "(" and ")"
  */
 Calculator.prototype.eParser = function() {
 	// Try to get the Abstract Syntax Tree (AST) for the expression starting at position 0
@@ -905,7 +937,7 @@ Calculator.prototype.Exp = function(p) {
 		var right = this.Exp(q);
 		// Create a "binary" AST node
 		tree = new CalculatorTree({
-			type: 'binary',
+			kind: 'binary',
 			token: token,
 			left: tree, // a primary in the first loop, a binary after that
 			right: right
@@ -927,7 +959,7 @@ Calculator.prototype.Primary = function() {
 		var q = op.precedence;
 		var right = this.Exp(q);
 		return new CalculatorTree({
-			type: 'prefix',
+			kind: 'prefix',
 			token: token.toLowerCase(),
 			right: right
 		});
@@ -938,7 +970,7 @@ Calculator.prototype.Primary = function() {
 		t = this.Exp(0);
 		this.expect(')');
 		return new CalculatorTree({
-			type: 'grouping',
+			kind: 'grouping',
 			left: t
 		});
 	}
@@ -965,7 +997,7 @@ Calculator.prototype.Primary = function() {
 		op = this.postfixOperators[token];
 		this.consume(token);
 		left = new CalculatorTree({
-			type: 'postfix',
+			kind: 'postfix',
 			token: token,
 			left: left
 		});
@@ -974,12 +1006,12 @@ Calculator.prototype.Primary = function() {
 	return left;
 };
 
-Calculator.prototype.Array = function(type, lastToken) {
+Calculator.prototype.Array = function(kind, lastToken) {
 	// Check for empty array or function without parameter
 	var token = this.next();
 	if (token === lastToken) {
 		this.consume(token);
-		return new CalculatorTree({ type: type, params: [] });
+		return new CalculatorTree({ kind: kind, params: [] });
 	}
 	// array (true, 1, 2) will be represented in t as binary(binary(literal(true), literal(1)), literal(2))
 	var t = this.Exp(0);
@@ -987,7 +1019,7 @@ Calculator.prototype.Array = function(type, lastToken) {
 	// params will flatten the array into [literal(true), literal(1), literal(2)]
 	var params = [];
 	function add(tree) {
-		if (tree.type === 'binary' && tree.token === ',') {
+		if (tree.kind === 'binary' && tree.token === ',') {
 			add(tree.left);
 			params.push(tree.right);
 		} else {
@@ -997,7 +1029,7 @@ Calculator.prototype.Array = function(type, lastToken) {
 	// start loop
 	add(t);
 	return new CalculatorTree({
-		type: type,
+		kind: kind,
 		params: params
 	});
 };
@@ -1009,15 +1041,15 @@ Calculator.prototype.Literal = function(token) {
 	if (this.functions.hasOwnProperty(tokenLC) || this.separators.indexOf(tokenLC) >= 0)
 		this.error('Expecting a value but found "%1" at position %0', [this.index, token], token.length);
 
-	// Predefined literal like null, false, true, pi, ...
+	// Predefined literals like pi, mem, ...
 	if (this.literals.hasOwnProperty(tokenLC))
-		return new CalculatorTree({ type: 'literal', token: token, literal: this.literals[tokenLC] });
+		return new CalculatorTree({ kind: 'literal', token: token, literal: this.literals[tokenLC] });
 
-	// Literal constructions
-	for (var i = 0; i < this.literalTypes.length; i++) {
-		var value = this.literalTypes[i](token);
+	// Type supported literals like boolean, dates, strings, numbers, ...
+	for (var i = 0; i < this.types.length; i++) {
+		var value = this.types[i].parse(token);
 		if (value !== undefined)
-			return new CalculatorTree({ type: 'literal', token: token, value: value });
+			return new CalculatorTree({ kind: 'constant', value: value, type: this.types[i] });
 	}
 
 	// Unsupported literal

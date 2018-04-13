@@ -1,6 +1,12 @@
 var languages = {
 	'fr': {
 		'Placeholder': 'Calculatrice',
+		'"YYYY/MM/DD"': '"DD/MM/YYYY"',
+		'"HH:mm"': '"HH:mm"',
+		'"YYYY/MM/DD HH:mm"': '"DD/MM/YYYY HH:mm"',
+		'null': 'vide',
+		'true': 'oui',
+		'false': 'non',
 		'sqrt': 'racine',
 		'pow': 'puissance',
 		'if': 'si',
@@ -15,6 +21,9 @@ var languages = {
 	},
 	'en': {
 		'Placeholder': 'Calculator',
+		'"YYYY/MM/DD"': '"M/D/YYYY"',
+		'"HH:mm"': '"hh:mm a"',
+		'"YYYY/MM/DD HH:mm"': '"M/D/YYYY hh:mm a"',
 		'convert': 'conv',
 		'random': 'rand',
 	}
@@ -368,6 +377,7 @@ function getWithCache(prompt, cacheKey, cacheUrlKey, cacheExpire, resolve, rejec
 $(function() {
 	var input = document.getElementById('calculator-content'),
 		calculator = new Calculator();
+	calculator.addDefaultTypes(lang);
 	calculator.addDefaultLiterals(lang);
 	calculator.addDefaultFunctions(lang);
 	calculator.addDefaultOperators(lang);
@@ -395,7 +405,8 @@ $(function() {
 		try {
 			val = input.value;
 			tree = calculator.parse(val);
-			//console.log(calculator.format(tree), tree);
+			//console.log(tree);
+			//console.log(calculator.format(tree));
 			calculator.calculate(tree, function(output) {
 				// console.log(output);
 				input.value = (output === null) ? 'null' : (typeof output === 'undefined') ? '' : output.toString();
