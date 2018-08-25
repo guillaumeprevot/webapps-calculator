@@ -29,7 +29,7 @@ var languages = {
 	}
 };
 
-var language = (typeof languages[navigator.language] !== 'undefined') ? languages[navigator.language] : languages['en'];
+var language = languages[navigator.language.substring(0, 2)] || languages['en'];
 
 function lang(text) {
 	return language[text] || text;

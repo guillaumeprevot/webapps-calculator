@@ -15,11 +15,13 @@ Les liens suivants ont été utiles pour cette application :
 - [Parsing Expressions by Recursive Descent](http://www.engr.mun.ca/~theo/Misc/exp_parsing.htm), un formidable article qui propose une méthode simple à implémenter pour créer un parseur... et qui a mené à l'écriture du parseur utilisé ici.
 - [jsep](http://jsep.from.so/), pour JavaScript Expression Parser, sous licence MIT, qui été utilisé jusqu'au 22/05/2016 pour l'analyse des formules. L'API comme le code sont simples à comprendre.
 - [jQuery 3.3.1](https://jquery.com/) sous licence MIT
-- [moment.js 2.21.0](https://momentjs.com/) sous licence MIT
+- [moment.js 2.22.2](https://momentjs.com/) sous licence MIT
 - [ECB](http://www.ecb.europa.eu/stats/exchange/eurofxref/html/index.en.html) qui utilisé dans le convertisseur monétaire pour obtenir des taux de change quotidien
+- [DryIcons](https://dryicons.com/) pour le favicon
 
-L'application devrait fonctionner correctement est mode déconnecté grâce aux **Service Workers** sous Chrome, Firefox et [d'autres bientôt](https://caniuse.com/#search=service+worker).
-Plus d'infos chez [Google](https://developers.google.com/web/fundamentals/primers/service-workers/) ou [Mozilla](https://developer.mozilla.org/en-US/docs/Web/API/Service_Worker_API/Using_Service_Workers).
+L'application devrait fonctionner correctement en mode déconnecté grâce aux **Service Workers** intégrés aux navigateurs modernes : d'abord Chrome+Opera+Firefox puis récemment Safari+Edge ([détail ici](https://caniuse.com/#search=service+worker) ).
+
+Plus d'infos sur les Services Workers chez [Google](https://developers.google.com/web/fundamentals/primers/service-workers/) ou [Mozilla](https://developer.mozilla.org/en-US/docs/Web/API/Service_Worker_API/Using_Service_Workers).
 
 ## Captures d'écran
 
@@ -180,9 +182,12 @@ Ce projet est distribué sous licence MIT, reproduite dans le fichier LICENSE ic
 - ajout de CalculatorType.check pour déterminer le type d'une valeur et la formatter correctement
 - ajout de CalculatorLiteral.type pour associer un type à chaque valeur (NB: dans le cas de 'mem', le type change dynamiquement)
 
+2018-08-25
+- correction de la détection de la langue ("navigator.language" peut faire plus de 2 caractères, comme "fr-FR" par exemple)
+- mise à jour de Moment.js 2.21.0 vers 2.22.2
+
 ## TODO
 
-- corriger la récupération de la langue car sous Edge, navigator.language retourne "fr-FR"
 - gérer le cache de "https://techgp.fr:11215/moneyrates" par le Service Worker (1 fetch par jour)
 - casser la récursivité
 - améliorer "reduceAll" pour être progressif (par exemple pour la fonction "si")
