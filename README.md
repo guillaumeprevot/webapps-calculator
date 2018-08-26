@@ -12,11 +12,11 @@ If((1+Pi == acos(-1) -2 + (1.5+1.5)) == true, "OK", "KO")
 
 Les liens suivants ont été utiles pour cette application :
 
-- [Parsing Expressions by Recursive Descent](http://www.engr.mun.ca/~theo/Misc/exp_parsing.htm), un formidable article qui propose une méthode simple à implémenter pour créer un parseur... et qui a mené à l'écriture du parseur utilisé ici.
-- [jsep](http://jsep.from.so/), pour JavaScript Expression Parser, sous licence MIT, qui été utilisé jusqu'au 22/05/2016 pour l'analyse des formules. L'API comme le code sont simples à comprendre.
+- [Parsing Expressions by Recursive Descent](https://www.engr.mun.ca/~theo/Misc/exp_parsing.htm), un formidable article qui propose une méthode simple à implémenter pour créer un parseur... et qui a mené à l'écriture du parseur utilisé ici.
+- [jsep](https://github.com/soney/jsep), pour JavaScript Expression Parser, sous licence MIT, qui été utilisé jusqu'au 22/05/2016 pour l'analyse des formules. L'API comme le code sont simples à comprendre.
 - [jQuery 3.3.1](https://jquery.com/) sous licence MIT
 - [moment.js 2.22.2](https://momentjs.com/) sous licence MIT
-- [ECB](http://www.ecb.europa.eu/stats/exchange/eurofxref/html/index.en.html) qui utilisé dans le convertisseur monétaire pour obtenir des taux de change quotidien
+- [ECB](https://www.ecb.europa.eu/stats/policy_and_exchange_rates/euro_reference_exchange_rates/html/index.en.html) qui utilisé dans le convertisseur monétaire pour obtenir des taux de change quotidien
 - [DryIcons](https://dryicons.com/) pour le favicon
 
 L'application devrait fonctionner correctement en mode déconnecté grâce aux **Service Workers** intégrés aux navigateurs modernes : d'abord Chrome+Opera+Firefox puis récemment Safari+Edge ([détail ici](https://caniuse.com/#search=service+worker) ).
@@ -83,7 +83,7 @@ Ce projet est distribué sous licence MIT, reproduite dans le fichier LICENSE ic
 - mettre en cache dans localStorage les taux de change (pour le mode déconnecté)
 
 2016-05-29
-- remplacement de [JSEP](http://jsep.from.so/) par un parseur fait maison, construit après lecture de l'article [Parsing Expressions by Recursive Descent](http://www.engr.mun.ca/~theo/Misc/exp_parsing.htm)
+- remplacement de [JSEP](https://github.com/soney/jsep) par un parseur fait maison, construit après lecture de l'article [Parsing Expressions by Recursive Descent](https://www.engr.mun.ca/~theo/Misc/exp_parsing.htm)
 
 2016-05-30
 - restaurer le support des chaînes de caractères (cf Literal et next())
@@ -185,6 +185,9 @@ Ce projet est distribué sous licence MIT, reproduite dans le fichier LICENSE ic
 2018-08-25
 - correction de la détection de la langue ("navigator.language" peut faire plus de 2 caractères, comme "fr-FR" par exemple)
 - mise à jour de Moment.js 2.21.0 vers 2.22.2
+
+2018-08-26
+- passage des liens externes en HTTPS
 
 ## TODO
 
