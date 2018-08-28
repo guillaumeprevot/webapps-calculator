@@ -150,33 +150,17 @@ function CalculatorError(formula, index, length, message, params) {
 
 /** Helper method to write formula to console and highlight the position where error occurred */
 CalculatorError.prototype.console = function() {
-	// Show formula on console
-	console.log(this.formula);
-	// Show error index in formula with ^
-	if ('repeat' in String.prototype) {
-		console.log(' '.repeat(this.index) + '^' + (this.length >= 2 ? ('-'.repeat(this.length - 2) + '^') : ''));
-	} else {
-		var s = '';
-		while (s.length < this.index) s += ' ';
-		console.log(s + '^');
-	}
+	var s = ' '; // 1 space
+	while (s.length < this.index) s = s + s; // x2 x4 ...
+	s = s.substring(0, this.index); // truncate
+	console.log(this.formula + '\n' + s + '^');
 };
 
 /** Helper method to highlight in an editable input or textarea the position where the error occurred */
 CalculatorError.prototype.select = function(input) {
 	input.focus();
-	if ('createTextRange' in input) {
-		// IE
-		var range = input.createTextRange();
-		range.collapse(true);
-		range.moveEnd('character', this.index + this.length);
-		range.moveStart('character', this.index);
-		range.select();
-	} else {
-		// Nice browsers
-		input.selectionEnd = this.index + this.length;
-		input.selectionStart = this.index;
-	}
+	input.selectionEnd = this.index + this.length;
+	input.selectionStart = this.index;
 };
 
 /** Get the formatted error message, with the opportunity to translate with the optional "lang" parameter */
@@ -410,7 +394,7 @@ Calculator.prototype.addDefaultLiterals = function(lang) {
 		},
 		function(newValue) {
 			mem = newValue;
-			memLiteral.type = calculator.types.find(function(t) { return t.check(newValue); }).name;
+			memLiteral.type = calculator.types.filter(function(t) { return t.check(newValue); })[0].name;
 			console.log(memLiteral);
 		});
 	calculator.addLiteralEntry(memLiteral);

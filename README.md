@@ -189,6 +189,9 @@ Ce projet est distribué sous licence MIT, reproduite dans le fichier LICENSE ic
 2018-08-26
 - passage des liens externes en HTTPS
 
+2018-08-28
+- correction pour compatibilité avec IE11+
+
 ## TODO
 
 - gérer le cache de "https://techgp.fr:11215/moneyrates" par le Service Worker (1 fetch par jour)

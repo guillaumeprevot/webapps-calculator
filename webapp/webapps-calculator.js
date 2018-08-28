@@ -411,8 +411,9 @@ $(function() {
 				// console.log(output);
 				if (typeof output === 'undefined')
 					input.value = '';
-				else
-					input.value = calculator.types.find(function(t) { return t.check(output); }).format(output);
+				else {
+					input.value = calculator.types.filter(function(t) { return t.check(output); })[0].format(output);
+				}
 				setMessage(val, false);
 			}, function(reason) {
 				console.log(reason);
