@@ -19,25 +19,24 @@
  * The list of type support is user-defined : some may use only integer, some may use different date format, ...
  *
  * @param {String} name - an internal name for the type support, to keep track of the input value (is the integer in decimal or octal format ?)
- * @param {Function} parse - a method receiving a token and returning either the corresponding value (if supported) or null (if unknown)
+ * @param {Function} parse - a method receiving a token and returning either the corresponding value (if supported) or undefined (if unknown)
  * @param {Function} format - a method receiving a supported value (or null), and returning the corresponding token
  */
-function CalculatorType(name, parse, format, check) {
+function CalculatorType(name, parse, format) {
 	this.name = name;
 	this.parse = parse;
 	this.format = format;
-	this.check = check;
 }
 
 /**
  * A literal is a token, associated with constants (like "pi" or "e") or variables (like "mem").
  *
  * Example for "pi" literal :
- * new CalculatorLiteral('pi', Math.PI);
+ * new CalculatorLiteral('pi', floatType, Math.PI);
  *
  * Example for "mem" variable :
  * var mem = 0;
- * new CalculatorLiteral('mem',
+ * new CalculatorLiteral('mem', integerType,
  *    function() { return mem; },
  *    function(newValue) { mem = newValue; }
  * );
@@ -63,40 +62,59 @@ function CalculatorLiteral(token, type, value, setter) {
 }
 
 /**
- * A function is a token (its name), followed by arguments separated with a ',' and enclosed between parenthesis. For instance, "min(a, b)" is :
+ * A function is a token (its name), followed by arguments separated with a ',' and enclosed between parenthesis.
+ * The behaviour of the function may be defined as :
+ * - function calculate(context, resolve(treeConstant), reject(any), treeValues...) : all params are reduced and calculate is then called
+ * - function reduce(context, resolve(treeReduced), reject(any), treeParams...) : more control on param's reduction is possible
  *
- * Example for "min" function :
- * new CalculatorFunction("min", "a, b", function(context, resolve, reject, a, b) {
- *   context.calculateAll([a, b], function(params) {
- *     resolve(Math.min(params[0], params[1]));
- *   }, reject);
+ * Example for "min" function providing the "calculate" method :
+ * new CalculatorFunction("min", "a, b", undefined, function(context, resolve, reject, a, b) {
+ *   resolve(CalculatorTree.newConstant(a.getType(), Math.min(a.getValue(), b.getValue()), undefined));
  * })
  *
- * Example for "if" function :
+ * Example for "if" function providing the "reduce" method :
  * new CalculatorFunction("if", "test, yes, no", function(context, resolve, reject, test, yes, no) {
- *   context.calculate(test, function(result) {
- *     context.calculate(result ? yes : no, resolve, reject);
+ *   var self = this;
+ *   context.reduce(test, function(result) {
+ *     if (result.isValue())
+ *       context.reduce(result.getValue() ? yes : no, resolve, reject);
+ *     else
+ *       context.reduceAll([yes, no], function(results) {
+ *         resolve(CalculatorTree.newFunction(self, [result, results[0], results[1]], undefined));
+ *       }, reject);
  *   }, reject);
- * })
+ * }, undefined)
  *
- * Example for an asynchronous calculation function :
- * new CalculatorFunction("myAsyncFunc", "a, b", function(context, resolve, reject, a, b) {
- *   context.calculateAll([a, b], function(params) {
- *   	myAsyncFunc(params)
- *        .done(function(data) { resolve(data); })
- *        .fail(function(error) { reject(error); });
- *   }, reject);
+ * Example for an asynchronous function providing the "calculate" method:
+ * new CalculatorFunction("myAsyncFunc", "a, b", undefined, function(context, resolve, reject, a, b) {
+ *   myAsyncBooleanFunc(a.getValue(), b.getValue())
+ *     .done(function(data) { resolve(CalculatorTree.newConstant(booleanType, data, undefined)); })
+ *     .fail(function(error) { reject(error); });
  * })
  *
  * @param {String} token - the token, as seen in formula
  * @param {String} params - an optional description of parameters (not used directly in parser)
+ * @param {Function} reduce - the function, used to reduce to a single value, if possible, or to a reduced function expression otherwise
  * @param {Function} calculate - the function, used to evaluate the result, with signature calculate(context, resolve, reject, params... )
  */
-function CalculatorFunction(token, params, calculate) {
+function CalculatorFunction(token, params, reduce, calculate) {
 	this.token = token;
 	this.params = params;
-	this.calculate = calculate;
+	this.reduce = reduce || CalculatorFunction.defaultReduce(calculate);
 }
+
+CalculatorFunction.defaultReduce = function(calculate) {
+	return function(context, resolve, reject) {
+		var self = this;
+		var params = Array.prototype.slice.apply(arguments, [3]);
+		context.reduceAll(params, function(results) {
+			if (results.filter(function(r) { return !r.isValue(); }).length === 0)
+				calculate.apply(null, [context, resolve, reject].concat(results));
+			else
+				resolve(CalculatorTree.newBinary(self, results[0], results[1], undefined));
+		});
+	};
+};
 
 /**
  * An operator is a token used to transforme a value (unary) or to combine two values (binary) :
@@ -105,31 +123,88 @@ function CalculatorFunction(token, params, calculate) {
  * - - (subtract) is usually a binary left-associative operator (i.e. 3-2-1 === (3-2)-1) but is also an unary operator
  * - ** (exponentiation) is a binary right-associative operator (i.e. 2^2^3 === 2^(2^3))
  *
- * Example for the subtraction binary operator :
- * new CalculatorOperator("-", 11, 'left', function(context, resolve, reject, a, b) {
- *   context.calculateAll([a, b], function(params) {
- *     resolve(params[0] - params[1]);
- *   }, reject);
+ * Example for the "subtraction" binary operator providing the "calculate" method :
+ * new CalculatorOperator("-", 11, 'left', undefined, function(context, resolve, reject, a, b) {
+ *   resolve(CalculatorTree.newConstant(a.getType(), a.getValue() - b.getValue(), undefined));
  * })
  *
- * Example for the ² postfix operator :
- * new CalculatorOperator("-", 14, 'postfix', function(context, resolve, reject, a) {
- *   context.calculate(a, function(result) {
- *     resolve(Math.pow(result, 2));
- *   }, reject);
+ * Example for the "²" postfix operator providing the "calculate" method :
+ * new CalculatorOperator("²", 14, 'postfix', undefined, function(context, resolve, reject, a) {
+ *   resolve(CalculatorTree.newConstant(a.getType(), Math.pow(a.getValue(), 2), undefined));
  * })
+ *
+ * Example for the "&&" logical operator providing the "reduce" method :
+ * new CalculatorOperator("&&", 4, 'left', function(context, resolve, reject, a, b) {
+ *   var self = this;
+ *   context.reduce(a, function(a) {
+ *     if (a.isValue()) {
+ *       if (a.getValue())
+ *         context.reduce(b, resolve, reject);
+ *       else
+ *         resolve(a);
+ *     } else {
+ *       context.reduce(b, function(b) {
+ *         resolve(CalculatorTree.newBinary(self, a, b, undefined));
+ *       }, reject);
+ *     }
+ *   }, reject);
+ * }, undefined)
  *
  * @param {String} token - the token, as seen in formula
  * @param {Number} precedence - the precedence of the operator (multiplication has greater precedence over addition)
  * @param {String} associativity - how to apply operator (can be "left" or "right" for binary operators and "prefix" or "postfix" for unary operators)
  * @param {Function} calculate - the function, used to evaluate the result, with signature calculate(context, resolve, reject, a[, b])
  */
-function CalculatorOperator(token, precedence, associativity, calculate) {
+function CalculatorOperator(token, precedence, associativity, reduce, calculate) {
 	this.token = token;
 	this.precedence = precedence;
 	this.associativity = associativity;
-	this.calculate = calculate;
+	if (reduce)
+		this.reduce = reduce;
+	else if (associativity === 'prefix')
+		this.reduce = CalculatorOperator.defaultPrefixReduce(calculate);
+	else if (associativity === 'postfix')
+		this.reduce = CalculatorOperator.defaultPostfixReduce(calculate);
+	else
+		this.reduce = CalculatorOperator.defaultBinaryReduce(calculate);
 }
+
+CalculatorOperator.defaultBinaryReduce = function(calculate) {
+	return function(context, resolve, reject, left, right) {
+		var self = this;
+		context.reduceAll([left, right], function(results) {
+			if (results[0].isValue() && results[1].isValue())
+				calculate(context, resolve, reject, results[0], results[1]);
+			else
+				resolve(CalculatorTree.newBinary(self, results[0], results[1], undefined));
+		});
+		
+	};
+};
+
+CalculatorOperator.defaultPrefixReduce = function(calculate) {
+	return function(context, resolve, reject, right) {
+		var self = this;
+		context.reduce(right, function(result) {
+			if (result.isValue())
+				calculate(context, resolve, reject, result);
+			else
+				resolve(CalculatorTree.newPrefix(self, result, undefined));
+		});
+	};
+};
+
+CalculatorOperator.defaultPostfixReduce = function(calculate) {
+	return function(context, resolve, reject, left) {
+		var self = this;
+		context.reduce(left, function(result) {
+			if (result.isValue())
+				calculate(context, resolve, reject, result);
+			else
+				resolve(CalculatorTree.newPostfix(self, result, undefined));
+		});
+	};
+};
 
 /**
  * A parsing error, providing information about original formula, parsing position and message.
@@ -182,11 +257,11 @@ CalculatorError.prototype.format = function(lang) {
  * This class represents the AST of an expression :
  * - Calculator.parse transforms a string expression (a.k.a formula) into a CalculatorTree
  * - Calculator.format transforms the CalculatorTree into an expression (a.k.a formula)
- * - Calculator.calculate can compute the value of CalculatorTree
+ * - Calculator.reduce can simplify a CalculatorTree, possibly to a single constant
  *
- * @member {String} kind - either 'constant', 'literal', 'array', 'grouping', 'binary', 'prefix', 'postfix' or 'function'.
+ * @member {String} kind - either 'constant', 'literal', 'array', 'grouping', 'binary', 'prefix', 'postfix' or 'function'
  * @member {String} token - the symbol of an 'operator'/ 'function' or the formula that resulted to this 'constant' / 'literal'
- * @member {CalculatorLiteral} literal - the literal definition that resulted to this 'literal'
+ * @member {Calculator*} source - the literal, operator or function definition that resulted to this 'literal', 'binary', 'prefix', 'postfix' or 'function'
  * @member {CalculatorType} type - the type of 'value' (if 'constant') of the expected evaluated value (for other kind of AST)
  * @member {*} value - the value of a 'constant'
  * @member {Array} params - the sub-elements of an 'array' or 'function'
@@ -198,13 +273,26 @@ CalculatorError.prototype.format = function(lang) {
 function CalculatorTree(model) {
 	this.kind = model.kind;
 	this.token = model.token;
-	this.literal = model.literal;
+	this.source = model.source;
 	this.type = model.type;
 	this.value = model.value;
 	this.params = model.params;
 	this.left = model.left;
 	this.right = model.right;
 }
+
+CalculatorTree.prototype.isValue = function() { return this.kind === 'constant' || this.kind === 'literal' /*TODO and this.source.resolvable*/; };
+CalculatorTree.prototype.getValue = function() { return this.kind === 'constant' ? this.value : this.source.value; };
+CalculatorTree.prototype.getType = function() { return this.kind === 'constant' ? this.type : this.source.type; };
+
+CalculatorTree.newConstant = function(type, value, token) { return new CalculatorTree({ kind: 'constant', type: type, value: value, token: token }); };
+CalculatorTree.newLiteral = function(literal, token) { return new CalculatorTree({ kind: 'literal', source: literal, token: token }); };
+CalculatorTree.newArray = function(params) { return new CalculatorTree({ kind: 'array', params: params }); };
+CalculatorTree.newGrouping = function(left) { return new CalculatorTree({ kind: 'grouping', left: left }); };
+CalculatorTree.newBinary = function(operator, left, right, token) { return new CalculatorTree({ kind: 'binary', source: operator, left: left, right: right, token: token }); };
+CalculatorTree.newPrefix = function(operator, right, token) { return new CalculatorTree({ kind: 'prefix', source: operator, right: right, token: token }); };
+CalculatorTree.newPostfix = function(operator, left, token) { return new CalculatorTree({ kind: 'postfix', source: operator, left: left, token: token }); };
+CalculatorTree.newFunction = function(func, params, token) { return new CalculatorTree({ kind: 'function', source: func, params: params, token: token }); };
 
 /**
  * The calculator combines the grammar (~syntax) and the parser (parse/format/calculate)
@@ -239,8 +327,8 @@ function Calculator() {
  * @see CalculatorType
  * @see Calculator.prototype.addTypeEntry
  */
-Calculator.prototype.addType = function(name, parse, format, check) {
-	this.addTypeEntry(new CalculatorType(name, parse, format, check));
+Calculator.prototype.addType = function(name, parse, format) {
+	this.addTypeEntry(new CalculatorType(name, parse, format));
 };
 
 /**
@@ -269,8 +357,6 @@ Calculator.prototype.addDefaultTypes = function(lang) {
 			return null;
 	}, function(v) {
 		return nullToken;
-	}, function(v) {
-		return v === null;
 	});
 
 	// Add support for boolean values
@@ -281,8 +367,6 @@ Calculator.prototype.addDefaultTypes = function(lang) {
 			return false;
 	}, function(v) {
 		return !v ? falseToken : trueToken;
-	}, function(v) {
-		return v === true || v === false;
 	});
 
 	// Add support for dates, times or datetimes using moment
@@ -307,15 +391,13 @@ Calculator.prototype.addDefaultTypes = function(lang) {
 			}
 		}, function(v) {
 			return moment(v).format(formatString);
-		}, function(v) {
-			return (typeof v === 'object')
-				&& (hasDate === v.hasOwnProperty('year'))
-				&& (hasTime === v.hasOwnProperty('hour'));
 		});
 	}
-	addMoment('datetime', true, '"YYYY/MM/DD HH:mm"', true, true);
-	addMoment('date', true, '"YYYY/MM/DD"', true, false);
-	addMoment('time', true, '"HH:mm"', false, true);
+	if (typeof moment !== 'undefined') {
+		addMoment('datetime', true, '"YYYY/MM/DD HH:mm"', true, true);
+		addMoment('date', true, '"YYYY/MM/DD"', true, false);
+		addMoment('time', true, '"HH:mm"', false, true);
+	}
 
 	// Add support for strings AFTER date/time because they are a special kind of strings
 	calculator.addType('string', function(token) {
@@ -323,34 +405,29 @@ Calculator.prototype.addDefaultTypes = function(lang) {
 			return token.substring(1, token.length - 1).replace('\\"', '"');
 	}, function(value) {
 		return '"' + value.replace('"', '\\"') + '"';
-	}, function(v) {
-		return typeof v === 'string';
 	});
 
 	// Add support for different number notations using rational expression
-	function addRegExp(name, regexp, parse, format, check) {
+	function addRegExp(name, regexp, parse, format) {
 		calculator.addType(name, function(token) {
 			if (regexp.test(token))
 				return parse(token);
 		}, function(value) {
 			return format(value);
-		}, check || function(v) {
-			return false;
 		});
 	}
 	addRegExp('hexadecimal', /^0x[0-9a-fA-F]+$/,
 			function(token) { return parseInt(token.substring(2), 16); },
-			function(value) { return '0x' + value.toString(16); });
+			function(value) { return (value < 0 ? '-0x' : '0x') + Math.abs(value).toString(16); });
 	addRegExp('octal', /^0o[0-7]+$/,
 			function(token) { return parseInt(token.substring(2), 8); },
-			function(value) { return '0o' + value.toString(8); });
+			function(value) { return (value < 0 ? '-0o' : '0o') + Math.abs(value).toString(8); });
 	addRegExp('binary', /^0b[0-1]+$/,
 			function(token) { return parseInt(token.substring(2), 2); },
-			function(value) { return '0b' + value.toString(2); });
+			function(value) { return (value < 0 ? '-0b' : '0b') + Math.abs(value).toString(2); });
 	addRegExp('float', /^\d+\.\d+$/,
 			function(token) { return parseFloat(token); },
-			function(value) { return value.toString(); },
-			function(value) { return typeof value === 'number'; }); // all numbers defaults to "float" type
+			function(value) { return value.toString(); });
 	addRegExp('integer', /^\d+$/,
 			function(token) { return parseInt(token); },
 			function(value) { return value.toFixed(0); });
@@ -382,22 +459,11 @@ Calculator.prototype.addLiteralEntry = function(entry) {
  */
 Calculator.prototype.addDefaultLiterals = function(lang) {
 	var calculator = this;
-	calculator.addLiteral(lang('pi'), 'float', Math.PI);
-	calculator.addLiteral(lang('e'), 'float', Math.E);
-	// The "mem" literal
-	var mem = null;
-	var memLiteral = new CalculatorLiteral(
-		lang('mem'),
-		'null', // type is 'null' at first because mem is null
-		function() {
-			return mem;
-		},
-		function(newValue) {
-			mem = newValue;
-			memLiteral.type = calculator.types.filter(function(t) { return t.check(newValue); })[0].name;
-			console.log(memLiteral);
-		});
-	calculator.addLiteralEntry(memLiteral);
+	var floatType = calculator.types.filter(function(t) { return t.name === 'float'; })[0];
+	var nullType = calculator.types.filter(function(t) { return t.name === 'null'; })[0];
+	calculator.addLiteral(lang('pi'), floatType, Math.PI);
+	calculator.addLiteral(lang('e'), floatType, Math.E);
+	calculator.addLiteral(lang('mem'), nullType, null);
 };
 
 /**
@@ -406,8 +472,8 @@ Calculator.prototype.addDefaultLiterals = function(lang) {
  * @see CalculatorFunction
  * @see Calculator.prototype.addFunctionEntry
  */
-Calculator.prototype.addFunction = function(token, params, calculate) {
-	this.addFunctionEntry(new CalculatorFunction(token, params, calculate));
+Calculator.prototype.addFunction = function(token, params, reduce, calculate) {
+	this.addFunctionEntry(new CalculatorFunction(token, params, reduce, calculate));
 };
 
 /**
@@ -426,40 +492,51 @@ Calculator.prototype.addFunctionEntry = function(entry) {
  */
 Calculator.prototype.addDefaultFunctions = function(lang) {
 	var calculator = this;
-	function addFromMath(token, params) {
-		calculator.addFunction(lang(token), params || '', function(context, resolve, reject) {
-			// Evaluate all "arguments" after "context" and store values in "params"
-			var params = [];
-			for (var i = 3; i < arguments.length; i++) {
-				params.push(arguments[i]);
-			}
-			context.calculateAll(params, function(values) {
-				// Call Math function with evaluated values
-				resolve(Math[token].apply(Math, values));
-			}, reject);
+	var floatType = calculator.types.filter(function(t) { return t.name === 'float'; })[0];
+	var stringType = calculator.types.filter(function(t) { return t.name === 'string'; })[0];
+	var integerType = calculator.types.filter(function(t) { return t.name === 'integer'; })[0];
+	var firstType = function(types) { return types[0]; };
+	var numericType = function(types) { return types.indexOf(floatType) >= 0 ? floatType : integerType; }; 
+
+	function addFromMath(token, params, type) {
+		calculator.addFunction(lang(token), params || '', undefined, function(context, resolve, reject) {
+			// Get all parameters for the Math function
+			var params = Array.prototype.slice.apply(arguments, [3]);
+			// Calculate the value
+			var constantValue = Math[token].apply(Math, params.map(function(p) { return p.getValue(); }));
+			// Get the type if the result
+			var constantType = (typeof type === 'function') ? type(params.map(function(p) { return p.getType(); })) : type;
+			// Call Math function with evaluated values
+			resolve(CalculatorTree.newConstant(constantType, constantValue, undefined));
 		});
 	}
 
-	'random'.split(',').forEach(function(token) { addFromMath(token); });
-	'abs,cos,sin,tan,acos,asin,atan,ceil,floor,round,exp,log,sqrt'.split(',').forEach(function(token) { addFromMath(token, 'x'); });
-	'pow,atan2'.split(',').forEach(function(token) { addFromMath(token, 'x, y'); });
-	'min,max'.split(',').forEach(function(token) { addFromMath(token, 'x1, x2*'); });
+	'random'.split(',').forEach(function(token) { addFromMath(token, '', floatType); });
+	'abs'.split(',').forEach(function(token) { addFromMath(token, 'x', firstType); });
+	'cos,sin,tan,acos,asin,atan,exp,log,sqrt'.split(',').forEach(function(token) { addFromMath(token, 'x', floatType); });
+	'ceil,floor,round'.split(',').forEach(function(token) { addFromMath(token, 'x', integerType); });
+	'pow,atan2'.split(',').forEach(function(token) { addFromMath(token, 'x, y', floatType); });
+	'min,max'.split(',').forEach(function(token) { addFromMath(token, 'x1, x2*', numericType); });
 
-	calculator.addFunction(lang('cbrt'), lang('x'), function(context, resolve, reject, x) {
-		context.calculate(x, function(x) {
-			resolve((x < 0 ? -1 : 1) * Math.pow(Math.abs(x), 1/3));
-		}, reject);
+	calculator.addFunction(lang('cbrt'), lang('x'), undefined, function(context, resolve, reject, x) {
+		var value = x.getValue();
+		resolve(CalculatorTree.newConstant(floatType, (value < 0 ? -1 : 1) * Math.pow(Math.abs(value), 1/3), undefined));
 	});
 	calculator.addFunction(lang('if'), lang('test, trueValue, falseValue'), function(context, resolve, reject, test, v1, v2) {
-		context.calculate(test, function(result) {
-			context.calculate(result ? v1 : v2, resolve, reject);
+		var self = this;
+		context.reduce(test, function(result) {
+			if (result.isValue()) {
+				context.reduce(result.getValue() ? v1 : v2, resolve, reject);
+			} else {
+				context.reduceAll([v1, v2], function(results) {
+					resolve(CalculatorTree.newFunction(self, [result, results[0], results[1]], undefined));
+				}, reject);
+			}
 		}, reject);
-	});
+	}, undefined);
 	if (typeof moment !== 'undefined') {
-		calculator.addFunction(lang('formatDate'), lang('date, format'), function(context, resolve, reject, date, format) {
-			context.calculateAll([date, format], function(results) {
-				resolve(moment(results[0]).format(results[1]));
-			}, reject);
+		calculator.addFunction(lang('formatDate'), lang('date, format'), undefined, function(context, resolve, reject, date, format) {
+			resolve(CalculatorTree.newConstant(stringType, moment(date.getValue()).format(format.getValue()), undefined));
 		});
 	}
 };
@@ -470,8 +547,8 @@ Calculator.prototype.addDefaultFunctions = function(lang) {
  * @see CalculatorOperator
  * @see Calculator.prototype.addOperatorEntry
  */
-Calculator.prototype.addOperator = function(token, precedence, associativity, calculate) {
-	this.addOperatorEntry(new CalculatorOperator(token, precedence, associativity, calculate));
+Calculator.prototype.addOperator = function(token, precedence, associativity, reduce, calculate) {
+	this.addOperatorEntry(new CalculatorOperator(token, precedence, associativity, reduce, calculate));
 };
 
 /**
@@ -496,93 +573,143 @@ Calculator.prototype.addDefaultOperators = function(lang) {
 	// Javascript : https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Operator_Precedence
 	// Java : https://docs.oracle.com/javase/tutorial/java/nutsandbolts/operators.html
 	var calculator = this;
-	function add(token, associativity, calculate) {
-		calculator.addOperator(lang(token), precedence, associativity, calculate);
+	var floatType = calculator.types.filter(function(t) { return t.name === 'float'; })[0];
+	var binaryType = calculator.types.filter(function(t) { return t.name === 'binary'; })[0];
+	var stringType = calculator.types.filter(function(t) { return t.name === 'string'; })[0];
+	var booleanType = calculator.types.filter(function(t) { return t.name === 'boolean'; })[0];
+	var integerType = calculator.types.filter(function(t) { return t.name === 'integer'; })[0];
+
+	function add(token, associativity, reduce, calculate) {
+		calculator.addOperator(lang(token), precedence, associativity, reduce, calculate);
 	}
-	function unary(calculate) {
-		return function(context, resolve, reject, a) { context.calculate(a, function(result) { resolve(calculate(result)); }, reject); };
+	function unary(type, calculate) {
+		return function(context, resolve, reject, a) { resolve(CalculatorTree.newConstant(type || a.getType(), calculate(a.getValue()), undefined)); };
 	}
 	function variable(execute) {
-		return function(context, resolve, reject, v) { resolve(execute(v.literal)); };
+		return function(context, resolve, reject, v) { resolve(CalculatorTree.newConstant(v.source.type, execute(v.source), undefined)); };
 	}
-	function binary(calculate) {
-		return function(context, resolve, reject, a, b) { context.calculateAll([a, b], function(results) { resolve(calculate(results[0], results[1])); }, reject); };
+	function binary(type, calculate) {
+		return function(context, resolve, reject, a, b) { resolve(CalculatorTree.newConstant(type, calculate(a.getValue(), b.getValue()), undefined)); };
 	}
 	var precedence = 0;
 	// "," is also used to parse function parameters (between "(" and ")") or array elements (between "[" and "]")
-	add(',', 'left', binary(function(a, b) { return a.concat ? a.concat(b) : [a, b]; }));
+	add(',', 'left', function(context, resolve, reject, a, b) {
+		context.reduceAll([a, b], function(values) {
+			resolve(CalculatorTree.newArray(values));
+		});
+	}, undefined);
 	precedence++;
 	add('=', 'right', function(context, resolve, reject, variable, b) {
-		context.calculate(b, function(result) {
-			variable.literal.value = result;
-			resolve(result);
+		context.reduce(b, function(b) {
+			if (b.isValue()) {
+				variable.source.value = b.getValue();
+				variable.source.type = b.getType();
+			}
+			resolve(b);
 		}, reject);
-	}); // affectation
+	}, undefined); // affectation
 	// += -= **= *= /= %= <<= >>= >>>= &= ^= |=
 	precedence++;
 	// ? :
 	precedence++;
 	add('||', 'left', function(context, resolve, reject, a, b) {
-		context.calculate(a, function(a) {
-			if (a)
-				resolve(true);
+		var self = this;
+		context.reduce(a, function(a) {
+			if (a.isValue() && a.getValue())
+				resolve(a);
 			else
-				context.calculate(b, resolve, reject);
+				context.reduce(b, function(b) {
+					if (b.isValue() && b.getValue())
+						resolve(b);
+					else
+						resolve(a.isValue() ? b : b.isValue() ? a : CalculatorTree.newBinary(self, a, b, undefined));
+				}, reject);
 		}, reject);
-	});
+	}, undefined);
 	precedence++;
 	add('&&', 'left', function(context, resolve, reject, a, b) {
-		context.calculate(a, function(a) {
-			if (!a)
-				resolve(false);
+		var self = this;
+		context.reduce(a, function(a) {
+			if (a.isValue() && !a.getValue())
+				resolve(a);
 			else
-				context.calculate(b, resolve, reject);
+				context.reduce(b, function(b) {
+					if (b.isValue() && !b.getValue())
+						resolve(b);
+					else
+						resolve(a.isValue() ? b : b.isValue() ? a : CalculatorTree.newBinary(self, a, b, undefined));
+				}, reject);
 		}, reject);
-	});
+	}, undefined);
 	precedence++;
-	add('|', 'left', binary(function(a, b) { return a | b; })); // bitwise OR
+	add('|', 'left', undefined, binary(binaryType, function(a, b) { return a | b; })); // bitwise OR
 	precedence++;
-	add('^', 'left', binary(function(a, b) { return a ^ b; })); // bitwise XOR
+	add('^', 'left', undefined, binary(binaryType, function(a, b) { return a ^ b; })); // bitwise XOR
 	precedence++;
-	add('&', 'left', binary(function(a, b) { return a & b; })); // bitwise AND
+	add('&', 'left', undefined, binary(binaryType, function(a, b) { return a & b; })); // bitwise AND
 	precedence++;
-	add('===', 'left', binary(function(a, b) { return a === b; }));
-	add('!==', 'left', binary(function(a, b) { return a !== b; }));
-	add('==', 'left', binary(/*jslint eqeq: true*/function(a, b) { return a == b; }));
-	add('!=', 'left', binary(/*jslint eqeq: true*/function(a, b) { return a != b; })); // &#x2260;
+	add('===', 'left', undefined, binary(booleanType, function(a, b) { return a === b; }));
+	add('!==', 'left', undefined, binary(booleanType, function(a, b) { return a !== b; }));
+	add('==', 'left', undefined, binary(booleanType, /*jslint eqeq: true*/function(a, b) { return a == b; }));
+	add('!=', 'left', undefined, binary(booleanType, /*jslint eqeq: true*/function(a, b) { return a != b; }));
 	precedence++;
-	add('<', 'left', binary(function(a, b) { return a < b; }));
-	add('>', 'left', binary(function(a, b) { return a > b; }));
-	add('<=', 'left', binary(function(a, b) { return a <= b; })); // &#x2264;
-	add('>=', 'left', binary(function(a, b) { return a >= b; })); // &#x2265;
-	add('∈', 'left', binary(function(a, b) { return b.indexOf(a) >= 0; }));
+	add('<', 'left', undefined, binary(booleanType, function(a, b) { return a < b; }));
+	add('>', 'left', undefined, binary(booleanType, function(a, b) { return a > b; }));
+	add('<=', 'left', undefined, binary(booleanType, function(a, b) { return a <= b; }));
+	add('>=', 'left', undefined, binary(booleanType, function(a, b) { return a >= b; }));
+	add('∈', 'left', function(context, resolve, reject, a, b) {
+		var self = this;
+		context.reduceAll([a, b], function(results) {
+			var value, hasVariable, i, p;
+			if (results[0].isValue()) {
+				value = results[0].getValue();
+				for (i = 0; i < results[1].params.length; i++) {
+					p = results[1].params[i];
+					if (! p.isValue())
+						hasVariable = true;
+					else if (p.getValue() === value) {
+						resolve(CalculatorTree.newConstant(booleanType, true));
+						return;
+					}
+				}
+				if (!hasVariable) {
+					resolve(CalculatorTree.newConstant(booleanType, false));
+					return;
+				}
+			}
+			resolve(CalculatorTree.newBinary(self, results[0], results[1], undefined));
+		});
+	}, undefined);
 	// instanceof
 	precedence++;
-	add('<<', 'left', binary(function(a, b) { return a << b; }));
-	add('>>', 'left', binary(function(a, b) { return a >> b; }));
-	add('>>>', 'left', binary(function(a, b) { return a >>> b; }));
+	add('<<', 'left', undefined, binary(integerType, function(a, b) { return a << b; }));
+	add('>>', 'left', undefined, binary(integerType, function(a, b) { return a >> b; }));
+	add('>>>', 'left', undefined, binary(integerType, function(a, b) { return a >>> b; }));
 	precedence++;
-	add('+', 'left', binary(function(a, b) { return a + b; })); // number addition and string concatenation
-	add('-', 'left', binary(function(a, b) { return a - b; }));
+	add('+', 'left', undefined, function(context, resolve, reject, a, b) {
+		var value = a.getValue() + b.getValue(); // number addition and string concatenation
+		resolve(CalculatorTree.newConstant(typeof value === 'string' ? stringType : floatType, value, undefined));
+	}); 
+	add('-', 'left', undefined, binary(floatType, function(a, b) { return a - b; }));
 	precedence++;
-	add('**', 'right', binary(function(a, b) { return Math.pow(a, b); }));
-	add('*', 'left', binary(function(a, b) { return a * b; })); // &#x00D7;
-	add('/', 'left', binary(function(a, b) { return a / b; })); // &#x00F7;
-	add('%', 'left', binary(function(a, b) { return a % b; }));
+	add('**', 'right', undefined, binary(floatType, function(a, b) { return Math.pow(a, b); }));
+	add('*', 'left', undefined, binary(floatType, function(a, b) { return a * b; })); // &#x00D7;
+	add('/', 'left', undefined, binary(floatType, function(a, b) { return a / b; })); // &#x00F7;
+	add('%', 'left', undefined, binary(floatType, function(a, b) { return a % b; }));
 	precedence++;
-	add('√', 'prefix', unary(function(a) { return Math.sqrt(a); }));
-	add('!', 'prefix', unary(function(a) { return !a; })); // logical not
-	add('~', 'prefix', unary(function(a) { return ~a; })); // bitwise not
-	add('+', 'prefix', unary(function(a) { return +a; }));
-	add('-', 'prefix', unary(function(a) { return -a; }));
+	add('√', 'prefix', undefined, unary(floatType, function(a) { return Math.sqrt(a); }));
+	add('!', 'prefix', undefined, unary(booleanType, function(a) { return !a; })); // logical not
+	add('~', 'prefix', undefined, unary(undefined, function(a) { return ~a; })); // bitwise not
+	add('+', 'prefix', undefined, unary(undefined, function(a) { return +a; }));
+	add('-', 'prefix', undefined, unary(undefined, function(a) { return -a; }));
 	add('++', 'prefix', variable(function(v) { return ++v.value; }));
 	add('--', 'prefix', variable(function(v) { return --v.value; }));
 	precedence++;
-	add('²', 'postfix', unary(function(a) { return Math.pow(a, 2); }));
-	add('³', 'postfix', unary(function(a) { return Math.pow(a, 3); }));
+	add('²', 'postfix', undefined, unary(undefined, function(a) { return Math.pow(a, 2); }));
+	add('³', 'postfix', undefined, unary(undefined, function(a) { return Math.pow(a, 3); }));
 	add('++', 'postfix', variable(function(v) { return v.value++; }));
 	add('--', 'postfix', variable(function(v) { return v.value--; }));
-	add('!', 'postfix', unary(function(a) { var result = 1; var v = Math.round(a); while (v !== 0) result *= v--; return result; })); // factorielle
+	add('!', 'postfix', undefined, unary(integerType, function(a) { var result = 1; var v = Math.round(a); while (v !== 0) result *= v--; return result; })); // factorielle
 	precedence++;
 	// add('.', 'left', binary(function(a, b) { return a[b]; })); // member access
 };
@@ -618,6 +745,9 @@ Calculator.prototype.parse = function(formula) {
  * var formula = "1+  2 ²"
  * var ast = calculator.parse(formula);
  * console.log(calculator.format(ast)); // "1 + 2²"
+ * calculator.reduce(ast, function(output) {
+ *   console.log(calculator.format(output)); // "5"
+ * });
  * </code>
  *
  * @param {Object} tree - the tree to format into a string
@@ -627,126 +757,24 @@ Calculator.prototype.format = function(tree) {
 		case 'constant': // 1, 123.45, true, null, ...
 			return tree.type.format(tree.value);
 		case 'literal': // pi, mem, ...
-			return tree.token;
+			return tree.token || tree.source.token;
 		case 'array': // [ params ]
 			return '[' + tree.params.map(this.format.bind(this)).join(', ') + ']';
 		case 'grouping': // ( left )
 			return '(' + this.format(tree.left) + ')';
 		case 'binary': // left token right
-			return this.format(tree.left) + ' ' + tree.token + ' ' + this.format(tree.right);
+			return this.format(tree.left) + ' ' + (tree.token || tree.source.token) + ' ' + this.format(tree.right);
 		case 'prefix': // token right
-			return tree.token + this.format(tree.right);
+			return (tree.token || tree.source.token) + this.format(tree.right);
 		case 'postfix': // left token
-			return this.format(tree.left) + tree.token;
+			return this.format(tree.left) + (tree.token || tree.source.token);
 		case 'function': // token ( params )
-			return tree.token + '(' + tree.params.map(this.format.bind(this)).join(', ') + ')';
+			return (tree.token || tree.source.token) + '(' + tree.params.map(this.format.bind(this)).join(', ') + ')';
 	}
 	throw Error('Invalid tree node kind ' + tree.kind, tree);
 };
 
-/**
- * This method calculates the value of an AST (like the one extracted by "parse"). For instance :
- *
- * <code>
- * var formula = "1+  2 ²"
- * var ast = calculator.parse(formula);
- * calculator.calculate(ast, function(value) {
- *   console.log(value, typeof value); // 5, number
- * }, function(error) {
- *   console.log('Error', error);
- * });
- * </code>
- *
- * @param {Object} tree - the tree to evaluate
- */
-Calculator.prototype.calculate = function(tree, resolve, reject) {
-	if (typeof tree === 'undefined') {
-		resolve(undefined);
-		return;
-	}
-	switch (tree.kind) {
-		case 'constant': // 1, 123.45, true, null, ...
-			resolve(tree.value);
-			break;
-		case 'literal': // pi, mem, ...
-			resolve(tree.literal.value);
-			break;
-		case 'array': // [ params ]
-			this.calculateAll(tree.params, resolve, reject);
-			break;
-		case 'grouping': // ( ... )
-			this.calculate(tree.left, resolve, reject);
-			break;
-		case 'binary': // left token right
-			this.binaryOperators[tree.token].calculate(this, resolve, reject, tree.left, tree.right);
-			break;
-		case 'prefix': // token right
-			this.prefixOperators[tree.token].calculate(this, resolve, reject, tree.right);
-			break;
-		case 'postfix': // left token
-			this.postfixOperators[tree.token].calculate(this, resolve, reject, tree.left);
-			break;
-		case 'function': // token ( params )
-			this.functions[tree.token].calculate.apply(null, [this, resolve, reject].concat(tree.params));
-			break;
-		default:
-			reject(new Error('Invalid tree node kind ' + tree.kind, tree));
-	}
-};
-
-Calculator.prototype.calculateAll = function(params, resolve, reject) {
-	if (params.length === 0) {
-		resolve([]);
-		return;
-	}
-	var count = params.length;
-	var values = [];
-	values.length = count;
-	params.forEach(function(param, index) {
-		this.calculate(param, function(value) {
-			values[index] = value;
-			if (count === 1) // if this is the last one
-				resolve(values); // we're done
-			count--; // otherwise, decrement and continue "params" evaluation
-		}, function(error) {
-			count = 0; // setting "count" to 0 to ensure "resolve" is not called
-			reject(error);
-		});
-	}.bind(this));
-};
-
 Calculator.prototype.reduce = function(tree, resolve, reject) {
-	// Construit une literal temporaire sur la base d'un résultat.
-	function makeLiteral(v) {
-		var lit = new CalculatorLiteral('', v);
-		lit.kind = 'literal';
-		return lit;
-	}
-
-	// Retourne true si c'est valeur.
-	function isConstant(o) {
-		return typeof o === 'number'
-			|| typeof o === 'boolean'
-			|| typeof o === 'string'
-			|| o === null
-			|| o instanceof moment;
-	}
-
-	// Convertie une constante en une expression.
-	var toExpression = function (o) {
-		if (typeof o === 'object' && o && o.reduce)
-			return o.reduce;
-		if (typeof o === 'number')
-			return '' + o;
-		if (typeof o === 'boolean')
-			return o === true ? 'true' : 'false';
-		if (typeof o === 'string')
-			return '"' + o + '"';
-		if (o instanceof moment)
-			return o.format(this.datetimeFormat);
-		return 'null';
-	}.bind(this);
-
 	if (typeof tree === 'undefined') {
 		resolve(undefined);
 		return;
@@ -754,68 +782,38 @@ Calculator.prototype.reduce = function(tree, resolve, reject) {
 
 	switch (tree.kind) {
 		case 'constant': // 1, 123.45, true, null, ...
-			resolve(tree.value);
+			resolve(tree);
 			break;
 		case 'literal': // pi, mem, ...
-			if (! tree.literal.notResolved)
-				resolve(tree.literal.value);
+			if (tree.source.notResolved)
+				resolve(tree);
 			else
-				resolve({ reduce: tree.token });
+				resolve(CalculatorTree.newConstant(tree.source.type, tree.source.value, undefined));
 			break;
 		case 'array': // [ params ]
 			this.reduceAll(tree.params, function(results) {
-				if (results.every(isConstant))
-					resolve(results);
-				else
-					resolve({ reduce: '[' + results.map(toExpression).join(',') + ']' });
-			}.bind(this), reject);
+				resolve(CalculatorTree.newArray(results));
+			}, reject);
 			break;
 		case 'grouping': // ( ... )
 			this.reduce(tree.left, function(resultLeft) {
-				if (isConstant(resultLeft))
+				if (resultLeft.kind === 'constant')
 					resolve(resultLeft);
 				else
-					resolve({ reduce: '(' + toExpression(resultLeft) + ')' });
-			}.bind(this), reject);
+					resolve(CalculatorTree.newGrouping(resultLeft));
+			}, reject);
 			break;
 		case 'binary': // left token right
-			this.reduce(tree.left, function(resultLeft) {
-				this.reduce(tree.right, function(resultRight) {
-					if (isConstant(resultLeft) && isConstant(resultRight))
-						this.binaryOperators[tree.token].calculate(this, resolve, reject, makeLiteral(resultLeft), makeLiteral(resultRight));
-					else
-						resolve({ reduce: toExpression(resultLeft) + tree.token + toExpression(resultRight) });
-				}.bind(this), reject);
-			}.bind(this), reject);
+			tree.source.reduce(this, resolve, reject, tree.left, tree.right);
 			break;
 		case 'prefix': // token right
-			this.reduce(tree.right, function(resultRight) {
-				if (isConstant(resultRight))
-					//JEROME -- ou ++ ne devrait pas reduce.
-					this.prefixOperators[tree.token].calculate(this, resolve, reject, makeLiteral(resultRight));
-				else
-					//JEROME -- ou ++ ne devrait pas reduce.
-					resolve({ reduce: tree.token + toExpression(resultRight) });
-			}.bind(this), reject);
+			tree.source.reduce(this, resolve, reject, tree.right);
 			break;
 		case 'postfix': // left token
-			this.reduce(tree.left, function(resultLeft) {
-				if (isConstant(resultLeft))
-					//JEROME -- ou ++ ne devrait pas reduce.
-					this.postfixOperators[tree.token].calculate(this, resolve, reject, makeLiteral(resultLeft));
-				else
-					//JEROME -- ou ++ ne devrait pas reduce.
-					resolve({ reduce: toExpression(resultLeft) + tree.token });
-			}.bind(this), reject);
+			tree.source.reduce(this, resolve, reject, tree.left);
 			break;
 		case 'function': // token ( params )
-			// JEROME les fonctions (comme "si") ne devraient pas toujours utiliser "reduceAll"
-			this.reduceAll(tree.params, function(results) {
-				if (results.every(isConstant))
-					this.functions[tree.token].calculate.apply(null, [this, resolve, reject].concat(results.map(makeLiteral)));
-				else
-					resolve({ reduce: tree.token  + '(' + results.map(toExpression).join(',') + ')' });
-			}.bind(this), reject);
+			tree.source.reduce.apply(tree.source, [this, resolve, reject].concat(tree.params));
 			break;
 		default:
 			reject(new Error('Invalid tree node kind ' + tree.kind, tree));
@@ -958,12 +956,7 @@ Calculator.prototype.Exp = function(p) {
 		// Get the right part of the binary operator "token"
 		var right = this.Exp(q);
 		// Create a "binary" AST node
-		tree = new CalculatorTree({
-			kind: 'binary',
-			token: token,
-			left: tree, // a primary in the first loop, a binary after that
-			right: right
-		});
+		tree = CalculatorTree.newBinary(op, tree /*a primary in the first loop, a binary after that*/, right, token);
 		// And check if the next token is also a binary operator
 		token = this.next().toLowerCase();
 	}
@@ -980,36 +973,26 @@ Calculator.prototype.Primary = function() {
 		this.consume(token);
 		var q = op.precedence;
 		var right = this.Exp(q);
-		return new CalculatorTree({
-			kind: 'prefix',
-			token: token.toLowerCase(),
-			right: right
-		});
+		return CalculatorTree.newPrefix(op, right, token.toLowerCase());
 	}
 	if ('(' === token) {
 		// If token is a '(' : consume it, get a single grouped expression and we should find the closing ')'
 		this.consume(token);
 		t = this.Exp(0);
 		this.expect(')');
-		return new CalculatorTree({
-			kind: 'grouping',
-			left: t
-		});
+		return CalculatorTree.newGrouping(t);
 	}
 	if ('[' === token) {
 		// If token is a '[' : consume it, get a multiple expressions array and we should find the closing ']'
 		this.consume(token);
-		t = this.Array('array', ']');
-		return t;
+		return CalculatorTree.newArray(this.Array(']'));
 	}
 	if (this.functions.hasOwnProperty(token.toLowerCase())) {
 		// If the token is a function's name : consume it and get parameters between '(' and ')'
 		var f = this.functions[token.toLowerCase()];
 		this.consume(token);
 		this.expect('(');
-		t = this.Array('function', ')');
-		t.token = token.toLowerCase();
-		return t;
+		return CalculatorTree.newFunction(f, this.Array(')'), token);
 	}
 	// Finally, the token should be a literal : consume it and check if it is followed by one or more postfix operators
 	var left = this.Literal(token);
@@ -1018,22 +1001,18 @@ Calculator.prototype.Primary = function() {
 	while (this.postfixOperators.hasOwnProperty(token)) {
 		op = this.postfixOperators[token];
 		this.consume(token);
-		left = new CalculatorTree({
-			kind: 'postfix',
-			token: token,
-			left: left
-		});
+		left = CalculatorTree.newPostfix(op, left, token);
 		token = this.next().toLowerCase();
 	}
 	return left;
 };
 
-Calculator.prototype.Array = function(kind, lastToken) {
+Calculator.prototype.Array = function(lastToken) {
 	// Check for empty array or function without parameter
 	var token = this.next();
 	if (token === lastToken) {
 		this.consume(token);
-		return new CalculatorTree({ kind: kind, params: [] });
+		return [];
 	}
 	// array (true, 1, 2) will be represented in t as binary(binary(literal(true), literal(1)), literal(2))
 	var t = this.Exp(0);
@@ -1050,10 +1029,7 @@ Calculator.prototype.Array = function(kind, lastToken) {
 	}
 	// start loop
 	add(t);
-	return new CalculatorTree({
-		kind: kind,
-		params: params
-	});
+	return params;
 };
 
 Calculator.prototype.Literal = function(token) {
@@ -1065,13 +1041,13 @@ Calculator.prototype.Literal = function(token) {
 
 	// Predefined literals like pi, mem, ...
 	if (this.literals.hasOwnProperty(tokenLC))
-		return new CalculatorTree({ kind: 'literal', token: token, literal: this.literals[tokenLC] });
+		return CalculatorTree.newLiteral(this.literals[tokenLC], token);
 
 	// Type supported literals like boolean, dates, strings, numbers, ...
 	for (var i = 0; i < this.types.length; i++) {
 		var value = this.types[i].parse(token);
 		if (value !== undefined)
-			return new CalculatorTree({ kind: 'constant', value: value, type: this.types[i] });
+			return CalculatorTree.newConstant(this.types[i], value, token);
 	}
 
 	// Unsupported literal

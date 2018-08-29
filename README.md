@@ -192,12 +192,24 @@ Ce projet est distribué sous licence MIT, reproduite dans le fichier LICENSE ic
 2018-08-28
 - correction pour compatibilité avec IE11+
 
+2018-08-31
+- fusion de "calculate" et "reduce"
+- ajout de CalculatorFunction.reduce pour que les fonctions puissent contrôler le calcul ou non des sous-noeuds
+  - pour les cas fonctions simples, la méthode "CalculatorFunction.defaultReduce" génèrera "reduce" à partir d'une fonction plus simple "calculate"
+- ajout de CalculatorOperator.reduce pour pouvoir contrôler le calcul ou non des sous-noeuds et accéder aux variables en cas d'affectation
+  - pour les cas fonctions simples, les 3 méthodes "CalculatorOperator.default***Reduce" génèreront "reduce" à partir d'une fonction plus simple "calculate"
+- ajout de CalculatorTree.source pour remplacer CalculatorTree.literal et pour pointer aussi sur l'opérateur ou la fonction associé
+- ajout des méthodes CalculatorTree.new* pour montrer les différents types de noeud que l'on peut créer (constante, litéral, fonction, groupe, ...)
+- modification de Calculator.reduce pour renvoyer un CalculatorTree, plus complet qy'une valeur brute dont on ne connait pas le type
+- modification de CalculatorLiteral.type pour pointer dorénavant sur l'objet CalculatorType et non plus le nom du type
+- suppression de CalculatorType.check devenu inutile puisque l'on n'a plus besoin de retrouver le type à partir de la valeur
+- suppression de Calculator.calculate et Calculator.calculateAll. Utiliser Calculator.reduce à la place
+- correction du formatage des valeurs < 0 en héxadécimal, octal et binaire
+
 ## TODO
 
 - gérer le cache de "https://techgp.fr:11215/moneyrates" par le Service Worker (1 fetch par jour)
 - casser la récursivité
-- améliorer "reduceAll" pour être progressif (par exemple pour la fonction "si")
-- améliorer "reduce" pour détecter les variables (par exemple dans les opérateurs ++ et --)
 - détecter les littéraux modifiables avec le test : typeof Object.getOwnPropertyDescriptor(literal, 'value').set === 'function'
 - support de la notation 2.1e3 pour 2 * 10^3
 - vérification des paramètres pour les fonctions et les opérateurs

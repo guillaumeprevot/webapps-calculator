@@ -382,12 +382,12 @@ $(function() {
 	calculator.addDefaultFunctions(lang);
 	calculator.addDefaultOperators(lang);
 
-	calculator.addFunction(lang('convert'), lang('1, "srcUnit", "dstUnit"'), function(context, resolve, reject, n, u1, u2) {
-		context.calculateAll([n, u1, u2], function(values) {
-			var converter = new Converter();
-			converter.addMoneyCategory(function() {
-				resolve(converter.convert(values[0], values[1], values[2]));
-			}, reject);
+	calculator.addFunction(lang('convert'), lang('1, "srcUnit", "dstUnit"'), undefined, function(context, resolve, reject, n, u1, u2) {
+		var converter = new Converter();
+		converter.addMoneyCategory(function() {
+			var value = converter.convert(n.getValue(), u1.getValue(), u2.getValue());
+			var floatType = calculator.types.filter(function(t) { return t.name === 'float'; })[0];
+			resolve(CalculatorTree.newConstant(floatType, value, undefined));
 		}, reject);
 	});
 
@@ -407,13 +407,15 @@ $(function() {
 			tree = calculator.parse(val);
 			//console.log(tree);
 			//console.log(calculator.format(tree));
-			calculator.calculate(tree, function(output) {
-				// console.log(output);
+			calculator.reduce(tree, function(output) {
+				//console.log(output);
+				//console.log(calculator.format(output));
 				if (typeof output === 'undefined')
 					input.value = '';
-				else {
-					input.value = calculator.types.filter(function(t) { return t.check(output); })[0].format(output);
-				}
+				else if (output.isValue())
+					input.value = output.getType().format(output.getValue());
+				else
+					input.value = calculator.format(output);
 				setMessage(val, false);
 			}, function(reason) {
 				console.log(reason);

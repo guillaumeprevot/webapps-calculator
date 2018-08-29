@@ -3,7 +3,7 @@
  * - GOOGLE : https://developers.google.com/web/fundamentals/primers/service-workers/#update-a-service-worker
  * - MOZILLA : https://developer.mozilla.org/en-US/docs/Web/API/Service_Worker_API/Using_Service_Workers
  */
-var cacheName = 'v2';
+var cacheName = 'v3';
 var baseCacheContent = [
 	'./libs/jquery/jquery.min.js',
 	'./libs/moment/moment-fr.js',
