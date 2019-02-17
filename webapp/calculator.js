@@ -34,30 +34,33 @@ function CalculatorType(name, parse, format) {
  * Example for "pi" literal :
  * new CalculatorLiteral('pi', floatType, Math.PI);
  *
- * Example for "mem" variable :
- * var mem = 0;
+ * Example for a global "mem" variable :
+ * new CalculatorLiteral('mem', integerType, 0, true);
+ * 
+ * Example for a context-local "mem" variable :
  * new CalculatorLiteral('mem', integerType,
- *    function() { return mem; },
- *    function(newValue) { mem = newValue; }
+ *    function(context) { return (typeof context.mem === 'undefined') ? 0 : context.mem; },
+ *    function(context, newValue) { context.mem = newValue; }
  * );
  *
  * @param {String} token - the token, as seen in formula
- * @param {String} type - the type name of the value returned by this literal ('null', 'boolean', 'string', 'float', ...)
- * @param {*} value - the corresponding value (or the getter for a variable), used to evaluate the result
- * @param {Function} setter - the setter, if provided, for a variable called "token"
+ * @param {CalculatorType} type - the type of the value returned by this literal ('null', 'boolean', 'string', 'float', ...)
+ * @param {Function(context)=>value} getValueOrValue - the function returning the literal value (or the value itself)
+ * @param {Function(context, value)} setValueOrEditable - the function setting the literal value (or a boolean indicating if the value is editable)
  */
-function CalculatorLiteral(token, type, value, setter) {
+function CalculatorLiteral(token, type, getValueOrValue, setValueOrEditable) {
 	this.token = token;
 	this.type = type;
-	if (typeof value === 'function') {
-		Object.defineProperty(this, 'value', {
-			get: value, // the getter
-			set: setter, // the setter
-			enumerable: true, // visible in "for ... in ..." and Object.keys()
-			configurable: false // can not change and be deleted with "delete"
-		});
+	if (typeof getValueOrValue === 'function') {
+		this.getValue = getValueOrValue;
+		this.setValue = setValueOrEditable;
+	} else if (setValueOrEditable) {
+		var v = getValueOrValue;
+		this.getValue = function(context) { return v; };
+		this.setValue = function(context, newValue) { v = newValue; };
 	} else {
-		this.value = value;
+		this.getValue = function(context) { return getValueOrValue; };
+		// this.setValue = undefined;
 	}
 }
 
@@ -69,7 +72,7 @@ function CalculatorLiteral(token, type, value, setter) {
  *
  * Example for "min" function providing the "calculate" method :
  * new CalculatorFunction("min", "a, b", undefined, function(context, resolve, reject, a, b) {
- *   resolve(CalculatorTree.newConstant(a.getType(), Math.min(a.getValue(), b.getValue()), undefined));
+ *   resolve(CalculatorTree.newConstant(a.getType(), Math.min(a.getValue(context), b.getValue(context)), undefined));
  * })
  *
  * Example for "if" function providing the "reduce" method :
@@ -77,17 +80,17 @@ function CalculatorLiteral(token, type, value, setter) {
  *   var self = this;
  *   context.reduce(test, function(result) {
  *     if (result.isValue())
- *       context.reduce(result.getValue() ? yes : no, resolve, reject);
+ *       context.reduce(result.getValue(context) ? yes : no, resolve, reject);
  *     else
  *       context.reduceAll([yes, no], function(results) {
  *         resolve(CalculatorTree.newFunction(self, [result, results[0], results[1]], undefined));
  *       }, reject);
  *   }, reject);
- * }, undefined)
+ * })
  *
  * Example for an asynchronous function providing the "calculate" method:
  * new CalculatorFunction("myAsyncFunc", "a, b", undefined, function(context, resolve, reject, a, b) {
- *   myAsyncBooleanFunc(a.getValue(), b.getValue())
+ *   myAsyncBooleanFunc(a.getValue(context), b.getValue(context))
  *     .done(function(data) { resolve(CalculatorTree.newConstant(booleanType, data, undefined)); })
  *     .fail(function(error) { reject(error); });
  * })
@@ -125,12 +128,12 @@ CalculatorFunction.defaultReduce = function(calculate) {
  *
  * Example for the "subtraction" binary operator providing the "calculate" method :
  * new CalculatorOperator("-", 11, 'left', undefined, function(context, resolve, reject, a, b) {
- *   resolve(CalculatorTree.newConstant(a.getType(), a.getValue() - b.getValue(), undefined));
+ *   resolve(CalculatorTree.newConstant(a.getType(), a.getValue(context) - b.getValue(context), undefined));
  * })
  *
  * Example for the "²" postfix operator providing the "calculate" method :
  * new CalculatorOperator("²", 14, 'postfix', undefined, function(context, resolve, reject, a) {
- *   resolve(CalculatorTree.newConstant(a.getType(), Math.pow(a.getValue(), 2), undefined));
+ *   resolve(CalculatorTree.newConstant(a.getType(), Math.pow(a.getValue(context), 2), undefined));
  * })
  *
  * Example for the "&&" logical operator providing the "reduce" method :
@@ -138,7 +141,7 @@ CalculatorFunction.defaultReduce = function(calculate) {
  *   var self = this;
  *   context.reduce(a, function(a) {
  *     if (a.isValue()) {
- *       if (a.getValue())
+ *       if (a.getValue(context))
  *         context.reduce(b, resolve, reject);
  *       else
  *         resolve(a);
@@ -153,7 +156,8 @@ CalculatorFunction.defaultReduce = function(calculate) {
  * @param {String} token - the token, as seen in formula
  * @param {Number} precedence - the precedence of the operator (multiplication has greater precedence over addition)
  * @param {String} associativity - how to apply operator (can be "left" or "right" for binary operators and "prefix" or "postfix" for unary operators)
- * @param {Function} calculate - the function, used to evaluate the result, with signature calculate(context, resolve, reject, a[, b])
+ * @param {Function} reduce - an optimized reduction function with signature reduce(context, resolve, reject, aTree[, bTree])
+ * @param {Function} calculate - a simplified calculation function, with signature calculate(context, resolve, reject, aValue[, bValue])
  */
 function CalculatorOperator(token, precedence, associativity, reduce, calculate) {
 	this.token = token;
@@ -281,8 +285,8 @@ function CalculatorTree(model) {
 	this.right = model.right;
 }
 
-CalculatorTree.prototype.isValue = function() { return this.kind === 'constant' || this.kind === 'literal' /*TODO and this.source.resolvable*/; };
-CalculatorTree.prototype.getValue = function() { return this.kind === 'constant' ? this.value : this.source.value; };
+CalculatorTree.prototype.isValue = function() { return this.kind === 'constant' || this.kind === 'literal' && !this.source.notResolved; };
+CalculatorTree.prototype.getValue = function(context) { return this.kind === 'constant' ? this.value : this.source.getValue(context); };
 CalculatorTree.prototype.getType = function() { return this.kind === 'constant' ? this.type : this.source.type; };
 
 CalculatorTree.newConstant = function(type, value, token) { return new CalculatorTree({ kind: 'constant', type: type, value: value, token: token }); };
@@ -321,23 +325,11 @@ function Calculator() {
 	this.separators = undefined;
 }
 
-/**
- * Helper method to support another type from from a name, a parse method and a format method.
- *
- * @see CalculatorType
- * @see Calculator.prototype.addTypeEntry
- */
+/** Helper method to support another type, either (name, parse, format) or (CalculatorType). */
 Calculator.prototype.addType = function(name, parse, format) {
-	this.addTypeEntry(new CalculatorType(name, parse, format));
-};
-
-/**
- * Helper method to support another type.
- *
- * @param {CalculatorType} entry - the type of values to add support for
- */
-Calculator.prototype.addTypeEntry = function(entry) {
+	var entry = (typeof name !== 'string') ? name : new CalculatorType(name, parse, format);
 	this.types.push(entry);
+	return entry;
 };
 
 /**
@@ -433,23 +425,11 @@ Calculator.prototype.addDefaultTypes = function(lang, moment) {
 			function(value) { return value.toFixed(0); });
 };
 
-/**
- * Helper method to add a literal from a token and a value (either constant or variable).
- *
- * @see CalculatorLiteral
- * @see Calculator.prototype.addLiteralEntry
- */
-Calculator.prototype.addLiteral = function(token, type, value, setter) {
-	this.addLiteralEntry(new CalculatorLiteral(token, type, value, setter));
-};
-
-/**
- * Helper method to add a literal object (either constant or variable).
- *
- * @see CalculatorLiteral
- */
-Calculator.prototype.addLiteralEntry = function(entry) {
+/** Helper method to add a literal object, either (token, type, getValueOrValue, setValueOrEditable) or (CalculatorLiteral). */
+Calculator.prototype.addLiteral = function(token, type, getValueOrValue, setValueOrEditable) {
+	var entry =(typeof token !== 'string') ? token : new CalculatorLiteral(token, type, getValueOrValue, setValueOrEditable);
 	this.literals[entry.token.toLowerCase()] = entry;
+	return entry;
 };
 
 /**
@@ -461,32 +441,21 @@ Calculator.prototype.addDefaultLiterals = function(lang) {
 	var calculator = this;
 	var floatType = calculator.types.filter(function(t) { return t.name === 'float'; })[0];
 	var nullType = calculator.types.filter(function(t) { return t.name === 'null'; })[0];
+
 	calculator.addLiteral(lang('pi'), floatType, Math.PI);
 	calculator.addLiteral(lang('e'), floatType, Math.E);
-	calculator.addLiteral(lang('mem'), nullType, null);
+	calculator.addLiteral(lang('mem'), nullType, null/*initial value*/, true/*editable*/);
 };
 
-/**
- * Helper method to add a function from a token, a description of parameters and a function used for evaluation.
- *
- * @see CalculatorFunction
- * @see Calculator.prototype.addFunctionEntry
- */
+/** Helper method to add a function object, either (token, params, reduce, calculate) or (CalculatorFunction) */
 Calculator.prototype.addFunction = function(token, params, reduce, calculate) {
-	this.addFunctionEntry(new CalculatorFunction(token, params, reduce, calculate));
-};
-
-/**
- * Helper method to add a function object.
- *
- * @see CalculatorFunction
- */
-Calculator.prototype.addFunctionEntry = function(entry) {
+	var entry =(typeof token !== 'string') ? token : new CalculatorFunction(token, params, reduce, calculate);
 	this.functions[entry.token.toLowerCase()] = entry;
+	return entry;
 };
 
 /**
- * Helper method to add default functions from javascript Math object, and an "if" function working like the "?:" operator.
+ * Helper method to add default functions ('if', 'formatDate' and some functions using Math object).
  *
  * @param {Function(String)->String} lang - a function to allow translation
  * @param {moment} moment - the moment API (or moment.utc API), if available. If not, the 'formatDate' function won't be available
@@ -504,7 +473,7 @@ Calculator.prototype.addDefaultFunctions = function(lang, moment) {
 			// Get all parameters for the Math function
 			var params = Array.prototype.slice.apply(arguments, [3]);
 			// Calculate the value
-			var constantValue = Math[token].apply(Math, params.map(function(p) { return p.getValue(); }));
+			var constantValue = Math[token].apply(Math, params.map(function(p) { return p.getValue(context); }));
 			// Get the type if the result
 			var constantType = (typeof type === 'function') ? type(params.map(function(p) { return p.getType(); })) : type;
 			// Call Math function with evaluated values
@@ -520,25 +489,24 @@ Calculator.prototype.addDefaultFunctions = function(lang, moment) {
 	'min,max'.split(',').forEach(function(token) { addFromMath(token, 'x1, x2*', numericType); });
 
 	calculator.addFunction(lang('cbrt'), lang('x'), undefined, function(context, resolve, reject, x) {
-		var value = x.getValue();
+		var value = x.getValue(context);
 		resolve(CalculatorTree.newConstant(floatType, (value < 0 ? -1 : 1) * Math.pow(Math.abs(value), 1/3), undefined));
 	});
 	calculator.addFunction(lang('if'), lang('test, trueValue, falseValue'), function(context, resolve, reject, test, v1, v2) {
 		var self = this;
 		context.reduce(test, function(result) {
 			if (result.isValue()) {
-				context.reduce(result.getValue() ? v1 : v2, resolve, reject);
+				context.reduce(result.getValue(context) ? v1 : v2, resolve, reject);
 			} else {
 				context.reduceAll([v1, v2], function(results) {
 					resolve(CalculatorTree.newFunction(self, [result, results[0], results[1]], undefined));
 				}, reject);
 			}
 		}, reject);
-	}, undefined);
-
+	});
 	function addDatePart(token, extract) {
 		calculator.addFunction(lang(token), lang('date'), undefined, function(context, resolve, reject, date) {
-			var v = date.getValue();
+			var v = date.getValue(context);
 			if (v === null)
 				resolve(CalculatorTree.newConstant(nullType, null, undefined));
 			else
@@ -547,7 +515,7 @@ Calculator.prototype.addDefaultFunctions = function(lang, moment) {
 	}
 	if (typeof moment !== 'undefined') {
 		calculator.addFunction(lang('formatDate'), lang('date, format'), undefined, function(context, resolve, reject, date, format) {
-			resolve(CalculatorTree.newConstant(stringType, moment(date.getValue()).format(format.getValue()), undefined));
+			resolve(CalculatorTree.newConstant(stringType, moment(date.getValue(context)).format(format.getValue(context)), undefined));
 		});
 		addDatePart('year', function(date) { return date.year; });
 		addDatePart('month', function(date) { return date.month + 1; });
@@ -558,27 +526,20 @@ Calculator.prototype.addDefaultFunctions = function(lang, moment) {
 	}
 };
 
-/**
- * Helper method to add an operator from a token, a precedence, an associativity and a function used for evaluation.
- *
- * @see CalculatorOperator
- * @see Calculator.prototype.addOperatorEntry
- */
+/** Helper method to add an operator object, either (token, precedence, associativity, reduce, calculate) or (CalculatorOperator) */
 Calculator.prototype.addOperator = function(token, precedence, associativity, reduce, calculate) {
-	this.addOperatorEntry(new CalculatorOperator(token, precedence, associativity, reduce, calculate));
-};
-
-/**
- * Helper method to add -in the appropriate map- an operator object.
- *
- * @see CalculatorOperator
- */
-Calculator.prototype.addOperatorEntry = function(entry) {
+	var entry =(typeof token !== 'string') ? token : new CalculatorOperator(token, precedence, associativity, reduce, calculate);
 	// Some tokens may be prefix, postfix and/or binary. For instance : "++" is prefix or postfix and "-" is prefix or binary
 	// To avoid naming conflict, operators are stored internally in three different maps.
 	// var operators = this[associativity + 'Operators'] || this.binaryOperators;
-	var operators = ('prefix' === entry.associativity) ? this.prefixOperators : ('postfix' === entry.associativity) ? this.postfixOperators : this.binaryOperators;
-	operators[entry.token.toLowerCase()] = entry;
+	var tokenLC = entry.token.toLowerCase();
+	if ('prefix' === entry.associativity)
+		this.prefixOperators[tokenLC] = entry;
+	else if ('postfix' === entry.associativity)
+		this.postfixOperators[tokenLC] = entry;
+	else
+		this.binaryOperators[tokenLC] = entry;
+	return entry;
 };
 
 /**
@@ -589,6 +550,7 @@ Calculator.prototype.addOperatorEntry = function(entry) {
 Calculator.prototype.addDefaultOperators = function(lang) {
 	// Javascript : https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Operator_Precedence
 	// Java : https://docs.oracle.com/javase/tutorial/java/nutsandbolts/operators.html
+	var precedence = 0;
 	var calculator = this;
 	var floatType = calculator.types.filter(function(t) { return t.name === 'float'; })[0];
 	var binaryType = calculator.types.filter(function(t) { return t.name === 'binary'; })[0];
@@ -600,15 +562,14 @@ Calculator.prototype.addDefaultOperators = function(lang) {
 		calculator.addOperator(lang(token), precedence, associativity, reduce, calculate);
 	}
 	function unary(type, calculate) {
-		return function(context, resolve, reject, a) { resolve(CalculatorTree.newConstant(type || a.getType(), calculate(a.getValue()), undefined)); };
+		return function(context, resolve, reject, a) { resolve(CalculatorTree.newConstant(type || a.getType(), calculate(a.getValue(context)), undefined)); };
 	}
 	function variable(execute) {
-		return function(context, resolve, reject, v) { resolve(CalculatorTree.newConstant(v.source.type, execute(v.source), undefined)); };
+		return function(context, resolve, reject, v) { resolve(CalculatorTree.newConstant(v.source.type, execute(context, v.source), undefined)); };
 	}
 	function binary(type, calculate) {
-		return function(context, resolve, reject, a, b) { resolve(CalculatorTree.newConstant(type, calculate(a.getValue(), b.getValue()), undefined)); };
+		return function(context, resolve, reject, a, b) { resolve(CalculatorTree.newConstant(type, calculate(a.getValue(context), b.getValue(context)), undefined)); };
 	}
-	var precedence = 0;
 	// "," is also used to parse function parameters (between "(" and ")") or array elements (between "[" and "]")
 	add(',', 'left', function(context, resolve, reject, a, b) {
 		context.reduceAll([a, b], function(values) {
@@ -619,24 +580,35 @@ Calculator.prototype.addDefaultOperators = function(lang) {
 	add('=', 'right', function(context, resolve, reject, variable, b) {
 		context.reduce(b, function(b) {
 			if (b.isValue()) {
-				variable.source.value = b.getValue();
+				variable.source.setValue(context, b.getValue(context));
 				variable.source.type = b.getType();
 			}
 			resolve(b);
 		}, reject);
 	}, undefined); // affectation
-	// += -= **= *= /= %= <<= >>= >>>= &= ^= |=
+	// +=
+	// -=
+	// **=
+	// *=
+	// /=
+	// %=
+	// <<=
+	// >>=
+	// >>>=
+	// &=
+	// ^=
+	// |=
 	precedence++;
 	// ? :
 	precedence++;
 	add('||', 'left', function(context, resolve, reject, a, b) {
 		var self = this;
 		context.reduce(a, function(a) {
-			if (a.isValue() && a.getValue())
+			if (a.isValue() && a.getValue(context))
 				resolve(a);
 			else
 				context.reduce(b, function(b) {
-					if (b.isValue() && b.getValue())
+					if (b.isValue() && b.getValue(context))
 						resolve(b);
 					else
 						resolve(a.isValue() ? b : b.isValue() ? a : CalculatorTree.newBinary(self, a, b, undefined));
@@ -647,11 +619,11 @@ Calculator.prototype.addDefaultOperators = function(lang) {
 	add('&&', 'left', function(context, resolve, reject, a, b) {
 		var self = this;
 		context.reduce(a, function(a) {
-			if (a.isValue() && !a.getValue())
+			if (a.isValue() && !a.getValue(context))
 				resolve(a);
 			else
 				context.reduce(b, function(b) {
-					if (b.isValue() && !b.getValue())
+					if (b.isValue() && !b.getValue(context))
 						resolve(b);
 					else
 						resolve(a.isValue() ? b : b.isValue() ? a : CalculatorTree.newBinary(self, a, b, undefined));
@@ -679,12 +651,12 @@ Calculator.prototype.addDefaultOperators = function(lang) {
 		context.reduceAll([a, b], function(results) {
 			var value, hasVariable, i, p;
 			if (results[0].isValue()) {
-				value = results[0].getValue();
+				value = results[0].getValue(context);
 				for (i = 0; i < results[1].params.length; i++) {
 					p = results[1].params[i];
 					if (! p.isValue())
 						hasVariable = true;
-					else if (p.getValue() === value) {
+					else if (p.getValue(context) === value) {
 						resolve(CalculatorTree.newConstant(booleanType, true));
 						return;
 					}
@@ -704,7 +676,7 @@ Calculator.prototype.addDefaultOperators = function(lang) {
 	add('>>>', 'left', undefined, binary(integerType, function(a, b) { return a >>> b; }));
 	precedence++;
 	add('+', 'left', undefined, function(context, resolve, reject, a, b) {
-		var value = a.getValue() + b.getValue(); // number addition and string concatenation
+		var value = a.getValue(context) + b.getValue(context); // number addition and string concatenation
 		resolve(CalculatorTree.newConstant(typeof value === 'string' ? stringType : floatType, value, undefined));
 	}); 
 	add('-', 'left', undefined, binary(floatType, function(a, b) { return a - b; }));
@@ -719,13 +691,13 @@ Calculator.prototype.addDefaultOperators = function(lang) {
 	add('~', 'prefix', undefined, unary(undefined, function(a) { return ~a; })); // bitwise not
 	add('+', 'prefix', undefined, unary(undefined, function(a) { return +a; }));
 	add('-', 'prefix', undefined, unary(undefined, function(a) { return -a; }));
-	add('++', 'prefix', variable(function(v) { return ++v.value; }));
-	add('--', 'prefix', variable(function(v) { return --v.value; }));
+	add('++', 'prefix', variable(function(c, v) { var r = v.getValue(c) + 1; v.setValue(c, r); return r; }));
+	add('--', 'prefix', variable(function(c, v) { var r = v.getValue(c) - 1; v.setValue(c, r); return r; }));
 	precedence++;
 	add('²', 'postfix', undefined, unary(undefined, function(a) { return Math.pow(a, 2); }));
 	add('³', 'postfix', undefined, unary(undefined, function(a) { return Math.pow(a, 3); }));
-	add('++', 'postfix', variable(function(v) { return v.value++; }));
-	add('--', 'postfix', variable(function(v) { return v.value--; }));
+	add('++', 'postfix', variable(function(c, v) { var r = v.getValue(c); v.setValue(c, r + 1); return r; }));
+	add('--', 'postfix', variable(function(c, v) { var r = v.getValue(c); v.setValue(c, r - 1); return r; }));
 	add('!', 'postfix', undefined, unary(integerType, function(a) { var result = 1; var v = Math.round(a); while (v !== 0) result *= v--; return result; })); // factorielle
 	precedence++;
 	// add('.', 'left', binary(function(a, b) { return a[b]; })); // member access
@@ -805,7 +777,7 @@ Calculator.prototype.reduce = function(tree, resolve, reject) {
 			if (tree.source.notResolved)
 				resolve(tree);
 			else
-				resolve(CalculatorTree.newConstant(tree.source.type, tree.source.value, undefined));
+				resolve(CalculatorTree.newConstant(tree.source.type, tree.source.getValue(this), undefined));
 			break;
 		case 'array': // [ params ]
 			this.reduceAll(tree.params, function(results) {

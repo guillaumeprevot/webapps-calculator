@@ -391,7 +391,7 @@ $(function() {
 	calculator.addFunction(lang('convert'), lang('1, "srcUnit", "dstUnit"'), undefined, function(context, resolve, reject, n, u1, u2) {
 		var converter = new Converter();
 		converter.addMoneyCategory(function() {
-			var value = converter.convert(n.getValue(), u1.getValue(), u2.getValue());
+			var value = converter.convert(n.getValue(context), u1.getValue(context), u2.getValue(context));
 			var floatType = calculator.types.filter(function(t) { return t.name === 'float'; })[0];
 			resolve(CalculatorTree.newConstant(floatType, value, undefined));
 		}, reject);
@@ -419,7 +419,7 @@ $(function() {
 				if (typeof output === 'undefined')
 					input.value = '';
 				else if (output.isValue())
-					input.value = output.getType().format(output.getValue());
+					input.value = output.getType().format(output.getValue(calculator));
 				else
 					input.value = calculator.format(output);
 				setMessage(val, false);
