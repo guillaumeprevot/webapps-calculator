@@ -114,8 +114,8 @@ CalculatorFunction.defaultReduce = function(calculate) {
 			if (results.filter(function(r) { return !r.isValue(); }).length === 0)
 				calculate.apply(null, [context, resolve, reject].concat(results));
 			else
-				resolve(CalculatorTree.newBinary(self, results[0], results[1], undefined));
-		});
+				resolve(CalculatorTree.newFunction(self, results, undefined));
+		}, reject);
 	};
 };
 
@@ -181,8 +181,7 @@ CalculatorOperator.defaultBinaryReduce = function(calculate) {
 				calculate(context, resolve, reject, results[0], results[1]);
 			else
 				resolve(CalculatorTree.newBinary(self, results[0], results[1], undefined));
-		});
-		
+		}, reject);
 	};
 };
 
@@ -194,7 +193,7 @@ CalculatorOperator.defaultPrefixReduce = function(calculate) {
 				calculate(context, resolve, reject, result);
 			else
 				resolve(CalculatorTree.newPrefix(self, result, undefined));
-		});
+		}, reject);
 	};
 };
 
@@ -206,7 +205,7 @@ CalculatorOperator.defaultPostfixReduce = function(calculate) {
 				calculate(context, resolve, reject, result);
 			else
 				resolve(CalculatorTree.newPostfix(self, result, undefined));
-		});
+		}, reject);
 	};
 };
 
@@ -465,8 +464,8 @@ Calculator.prototype.addDefaultFunctions = function(lang, moment) {
 	var floatType = calculator.types.filter(function(t) { return t.name === 'float'; })[0];
 	var stringType = calculator.types.filter(function(t) { return t.name === 'string'; })[0];
 	var integerType = calculator.types.filter(function(t) { return t.name === 'integer'; })[0];
-	var firstType = function(types) { return types[0]; };
-	var numericType = function(types) { return types.indexOf(floatType) >= 0 ? floatType : integerType; }; 
+	var firstType = function(params) { return params[0].getType(); };
+	var numericType = function(params) { return params.some(function(p) { return p.getType() === floatType; }) ? floatType : integerType; }; 
 
 	function addFromMath(token, params, type) {
 		calculator.addFunction(lang(token), params || '', undefined, function(context, resolve, reject) {
@@ -475,7 +474,7 @@ Calculator.prototype.addDefaultFunctions = function(lang, moment) {
 			// Calculate the value
 			var constantValue = Math[token].apply(Math, params.map(function(p) { return p.getValue(context); }));
 			// Get the type if the result
-			var constantType = (typeof type === 'function') ? type(params.map(function(p) { return p.getType(); })) : type;
+			var constantType = (typeof type === 'function') ? type(params) : type;
 			// Call Math function with evaluated values
 			resolve(CalculatorTree.newConstant(constantType, constantValue, undefined));
 		});
@@ -574,7 +573,7 @@ Calculator.prototype.addDefaultOperators = function(lang) {
 	add(',', 'left', function(context, resolve, reject, a, b) {
 		context.reduceAll([a, b], function(values) {
 			resolve(CalculatorTree.newArray(values));
-		});
+		}, reject);
 	}, undefined);
 	precedence++;
 	add('=', 'right', function(context, resolve, reject, variable, b) {
@@ -667,7 +666,7 @@ Calculator.prototype.addDefaultOperators = function(lang) {
 				}
 			}
 			resolve(CalculatorTree.newBinary(self, results[0], results[1], undefined));
-		});
+		}, reject);
 	}, undefined);
 	// instanceof
 	precedence++;

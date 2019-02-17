@@ -410,6 +410,8 @@ $(function() {
 		var val, tree;
 		try {
 			val = input.value;
+			if (! val)
+				return;
 			tree = calculator.parse(val);
 			//console.log(tree);
 			//console.log(calculator.format(tree));
