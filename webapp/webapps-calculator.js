@@ -2,13 +2,19 @@ var languages = {
 	'fr': {
 		'Placeholder': 'Calculatrice',
 		'"YYYY/MM/DD"': '"DD/MM/YYYY"',
-		'"HH:mm"': '"HH:mm"',
-		'"YYYY/MM/DD HH:mm"': '"DD/MM/YYYY HH:mm"',
+		'"HH:mm:ss"': '"HH:mm:ss"',
+		'"YYYY/MM/DD HH:mm:ss"': '"DD/MM/YYYY HH:mm"',
 		'null': 'vide',
 		'true': 'oui',
 		'false': 'non',
 		'sqrt': 'racine',
 		'pow': 'puissance',
+		'year': 'année',
+		'month': 'mois',
+		'date': 'jour',
+		'hour': 'heure',
+		'minute': 'minute',
+		'second': 'seconde',
 		'if': 'si',
 		'test, trueValue, falseValue': 'test, valeurVrai, valeurFaux',
 		'convert': 'convertir',
@@ -22,8 +28,8 @@ var languages = {
 	'en': {
 		'Placeholder': 'Calculator',
 		'"YYYY/MM/DD"': '"M/D/YYYY"',
-		'"HH:mm"': '"hh:mm a"',
-		'"YYYY/MM/DD HH:mm"': '"M/D/YYYY hh:mm a"',
+		'"HH:mm:ss"': '"hh:mm:ss a"',
+		'"YYYY/MM/DD HH:mm:ss"': '"M/D/YYYY hh:mm a"',
 		'convert': 'conv',
 		'random': 'rand',
 	}
@@ -377,9 +383,9 @@ function getWithCache(prompt, cacheKey, cacheUrlKey, cacheExpire, resolve, rejec
 $(function() {
 	var input = document.getElementById('calculator-content'),
 		calculator = new Calculator();
-	calculator.addDefaultTypes(lang);
+	calculator.addDefaultTypes(lang, moment.utc);
 	calculator.addDefaultLiterals(lang);
-	calculator.addDefaultFunctions(lang);
+	calculator.addDefaultFunctions(lang, moment.utc);
 	calculator.addDefaultOperators(lang);
 
 	calculator.addFunction(lang('convert'), lang('1, "srcUnit", "dstUnit"'), undefined, function(context, resolve, reject, n, u1, u2) {

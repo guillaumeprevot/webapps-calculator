@@ -13,8 +13,8 @@
  * - the "hexadecimal" type support understands '0x110' as 272 integer value
  * - the "string" type support understands '"toto"' (with quotes) as the string "toto"
  * - the "date" type support understands '"2018/04/13"' (with quotes) as the date 13th April 2018
- * - the "time" type support understands '"13:50"' (with quotes) as the time 1:50 PM
- * - the "datetime" type support understands '"2018/04/13 13:50"' (with quotes) as the date/time 13th April 2018 at 1:50 PM
+ * - the "time" type support understands '"13:50:42"' (with quotes) as the time 1:50:42 PM
+ * - the "datetime" type support understands '"2018/04/13 13:50:42"' (with quotes) as the date/time 13th April 2018 at 1:50:42 PM
  *
  * The list of type support is user-defined : some may use only integer, some may use different date format, ...
  *
@@ -344,8 +344,9 @@ Calculator.prototype.addTypeEntry = function(entry) {
  * Helper method to add default type supports (null, boolean, date/times, numbers, ...)
  *
  * @param {Function(String)->String} lang - a function to allow translation
+ * @param {moment} moment - the moment API (or moment.uct API), if available. If not, the 'date', 'time' and 'datetime' types won't be available
  */
-Calculator.prototype.addDefaultTypes = function(lang) {
+Calculator.prototype.addDefaultTypes = function(lang, moment) {
 	var calculator = this;
 	var nullToken = lang('null').toLowerCase();
 	var trueToken = lang('true').toLowerCase();
@@ -370,11 +371,10 @@ Calculator.prototype.addDefaultTypes = function(lang) {
 	});
 
 	// Add support for dates, times or datetimes using moment
-	function addMoment(name, utc, format, hasDate, hasTime) {
-		var momentMethod = utc ? moment.utc : moment;
+	function addMoment(name, format, hasDate, hasTime) {
 		var formatString = lang(format);
 		calculator.addType(name, function(t) {
-			var m = momentMethod(t, formatString, true/*strict*/);
+			var m = moment(t, formatString, true/*strict*/);
 			if (m.isValid()) {
 				var r = {};
 				if (hasDate) {
@@ -394,9 +394,9 @@ Calculator.prototype.addDefaultTypes = function(lang) {
 		});
 	}
 	if (typeof moment !== 'undefined') {
-		addMoment('datetime', true, '"YYYY/MM/DD HH:mm"', true, true);
-		addMoment('date', true, '"YYYY/MM/DD"', true, false);
-		addMoment('time', true, '"HH:mm"', false, true);
+		addMoment('datetime', '"YYYY/MM/DD HH:mm:ss"', true, true);
+		addMoment('date', '"YYYY/MM/DD"', true, false);
+		addMoment('time', '"HH:mm:ss"', false, true);
 	}
 
 	// Add support for strings AFTER date/time because they are a special kind of strings
@@ -489,8 +489,9 @@ Calculator.prototype.addFunctionEntry = function(entry) {
  * Helper method to add default functions from javascript Math object, and an "if" function working like the "?:" operator.
  *
  * @param {Function(String)->String} lang - a function to allow translation
+ * @param {moment} moment - the moment API (or moment.utc API), if available. If not, the 'formatDate' function won't be available
  */
-Calculator.prototype.addDefaultFunctions = function(lang) {
+Calculator.prototype.addDefaultFunctions = function(lang, moment) {
 	var calculator = this;
 	var floatType = calculator.types.filter(function(t) { return t.name === 'float'; })[0];
 	var stringType = calculator.types.filter(function(t) { return t.name === 'string'; })[0];
@@ -534,10 +535,26 @@ Calculator.prototype.addDefaultFunctions = function(lang) {
 			}
 		}, reject);
 	}, undefined);
+
+	function addDatePart(token, extract) {
+		calculator.addFunction(lang(token), lang('date'), undefined, function(context, resolve, reject, date) {
+			var v = date.getValue();
+			if (v === null)
+				resolve(CalculatorTree.newConstant(nullType, null, undefined));
+			else
+				resolve(CalculatorTree.newConstant(integerType, extract(v), undefined));
+		});
+	}
 	if (typeof moment !== 'undefined') {
 		calculator.addFunction(lang('formatDate'), lang('date, format'), undefined, function(context, resolve, reject, date, format) {
 			resolve(CalculatorTree.newConstant(stringType, moment(date.getValue()).format(format.getValue()), undefined));
 		});
+		addDatePart('year', function(date) { return date.year; });
+		addDatePart('month', function(date) { return date.month + 1; });
+		addDatePart('date', function(date) { return date.date; });
+		addDatePart('hour', function(date) { return date.hour; });
+		addDatePart('minute', function(date) { return date.minute; });
+		addDatePart('second', function(date) { return date.second; });
 	}
 };
 
