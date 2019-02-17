@@ -206,13 +206,24 @@ Ce projet est distribué sous licence MIT, reproduite dans le fichier LICENSE ic
 - suppression de Calculator.calculate et Calculator.calculateAll. Utiliser Calculator.reduce à la place
 - correction du formatage des valeurs < 0 en héxadécimal, octal et binaire
 
+2019-02-17
+- ajout des fonctions "year", "month", "date", "hour", "minute" et "second" ("année", "mois", "jour", "heure", "minute", "seconde" en "français")
+- modification des dates/heures pour prendre en compte les secondes par défaut ("lang" permet de personnaliser ce point, comme la calculatrice qui zappe les secondes en datetime)
+- modification du choix UTC ou non en passant le constructeur "moment" ou "moment.utc" aux types "date", "time", "datetime" et à la fonction "formatDate" plutôt que de forcer UTC
+- remplacement de CalculatorLiteral.value par 2 fonctions CalculatorLiteral.getValue(context) et CalculatorLiteral.setValue(context, newValue)
+- CalculatorLiteral peut maintenant éviter les variables globales et ainsi, à moyen terme, permettra de lancer en parallèle plusieurs calculs
+- correction de CalculatorFunction.defaultReduce qui retournait parfois des CalculatorTree.newBinary au lieu de CalculatorTree.newFunction
+- correction de quelques passage de "reject" oubliés lors des appels à context.reduce et context.reduceAll
+- correction de "addDefaultFunctions" pour accélérer la recherche du type approprié
+- correction de la calculatrice qui lançait une erreur si on demandait le calcul d'une formule vide
+- mise à jour du CHANGELOG dans README.md
+
 ## TODO
 
 - gérer le cache de "https://techgp.fr:11215/moneyrates" par le Service Worker (1 fetch par jour)
 - casser la récursivité
-- détecter les littéraux modifiables avec le test : typeof Object.getOwnPropertyDescriptor(literal, 'value').set === 'function'
 - support de la notation 2.1e3 pour 2 * 10^3
-- vérification des paramètres pour les fonctions et les opérateurs
+- vérification des paramètres pour les fonctions et les opérateurs (y compris si un litéral est modifiable)
 - ajout de +ror, +rol (operator décalage de bit avec rotation), présents dans la calculette windows
 - saisie des angles en radian/degré/grade
 - recherche ?
