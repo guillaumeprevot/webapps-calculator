@@ -106,6 +106,11 @@ function CalculatorFunction(token, params, reduce, calculate) {
 	this.reduce = reduce || CalculatorFunction.defaultReduce(calculate);
 }
 
+/**
+ * Default reduce implementation using a "calculate" function working on reduced values.
+ * It is not optimal because all params are reduced, even if the resulting value is not used (see "if" function for instance).
+ * If any params can not be reduced to a single value, the function resolves to a simplified expression of the same function.
+ */
 CalculatorFunction.defaultReduce = function(calculate) {
 	return function(context, resolve, reject) {
 		var self = this;
@@ -173,6 +178,11 @@ function CalculatorOperator(token, precedence, associativity, reduce, calculate)
 		this.reduce = CalculatorOperator.defaultBinaryReduce(calculate);
 }
 
+/**
+ * Default reduce implementation of a binary operator using a "calculate" function working on reduced left and right values.
+ * It is not optimal because all params are reduced, even if the resulting value is not used (see "||" operator for instance).
+ * If left or right can not be reduced to a single value, the operator resolves to a simplified expression of the same operation.
+ */
 CalculatorOperator.defaultBinaryReduce = function(calculate) {
 	return function(context, resolve, reject, left, right) {
 		var self = this;
@@ -185,6 +195,11 @@ CalculatorOperator.defaultBinaryReduce = function(calculate) {
 	};
 };
 
+/**
+ * Default reduce implementation of a prefix operator using a "calculate" function working on the reduced right-side value.
+ * Any prefix operator can override this default implementation if needed, even if I can't see any usecase for this.
+ * If right can not be reduced to a single value, the operator resolves to a simplified expression of the same operation.
+ */
 CalculatorOperator.defaultPrefixReduce = function(calculate) {
 	return function(context, resolve, reject, right) {
 		var self = this;
@@ -197,6 +212,11 @@ CalculatorOperator.defaultPrefixReduce = function(calculate) {
 	};
 };
 
+/**
+ * Default reduce implementation of a postfix operator using a "calculate" function working on the reduced left-side value.
+ * Any postfix operator can override this default implementation if needed, even if I can't see any usecase for this.
+ * If left can not be reduced to a single value, the operator resolves to a simplified expression of the same operation.
+ */
 CalculatorOperator.defaultPostfixReduce = function(calculate) {
 	return function(context, resolve, reject, left) {
 		var self = this;
@@ -270,8 +290,6 @@ CalculatorError.prototype.format = function(lang) {
  * @member {Array} params - the sub-elements of an 'array' or 'function'
  * @member {CalculatorTree} left - the first sub-element of a 'binary' operator or the single sub-element of a 'grouping' element or 'postfix' operator
  * @member {CalculatorTree} right - the second sub-element of a 'binary' operator or the single sub-element of a 'prefix' operator
- * @param model
- * @returns
  */
 function CalculatorTree(model) {
 	this.kind = model.kind;
@@ -284,17 +302,28 @@ function CalculatorTree(model) {
 	this.right = model.right;
 }
 
+/** @returns true if the reduces tree is a value, either a constant or a literal with a value */
 CalculatorTree.prototype.isValue = function() { return this.kind === 'constant' || this.kind === 'literal' && !this.source.notResolved; };
+/** @returns the value of this reduced tree, either the constant's value or the literal's value in this context */
 CalculatorTree.prototype.getValue = function(context) { return this.kind === 'constant' ? this.value : this.source.getValue(context); };
+/** @returns the type of this reduces tree, either the constant's type or the literal's type */
 CalculatorTree.prototype.getType = function() { return this.kind === 'constant' ? this.type : this.source.type; };
 
+/** @returns a new CalculatorTree representing a constant expression */
 CalculatorTree.newConstant = function(type, value, token) { return new CalculatorTree({ kind: 'constant', type: type, value: value, token: token }); };
+/** @returns a new CalculatorTree representing a literal expression */
 CalculatorTree.newLiteral = function(literal, token) { return new CalculatorTree({ kind: 'literal', source: literal, token: token }); };
+/** @returns a new CalculatorTree representing an array of CalculatorTree */
 CalculatorTree.newArray = function(params) { return new CalculatorTree({ kind: 'array', params: params }); };
+/** @returns a new CalculatorTree representing a CalculatorTree surrounded by parenthesis */
 CalculatorTree.newGrouping = function(left) { return new CalculatorTree({ kind: 'grouping', left: left }); };
+/** @returns a new CalculatorTree representing a binary operation on two CalculatorTree */
 CalculatorTree.newBinary = function(operator, left, right, token) { return new CalculatorTree({ kind: 'binary', source: operator, left: left, right: right, token: token }); };
+/** @returns a new CalculatorTree representing a prefix operation on a single CalculatorTree */
 CalculatorTree.newPrefix = function(operator, right, token) { return new CalculatorTree({ kind: 'prefix', source: operator, right: right, token: token }); };
+/** @returns a new CalculatorTree representing a postfix operation on a single CalculatorTree */
 CalculatorTree.newPostfix = function(operator, left, token) { return new CalculatorTree({ kind: 'postfix', source: operator, left: left, token: token }); };
+/** @returns a new CalculatorTree representing a function call using an array of CalculatorTree as params */
 CalculatorTree.newFunction = function(func, params, token) { return new CalculatorTree({ kind: 'function', source: func, params: params, token: token }); };
 
 /**
@@ -461,6 +490,7 @@ Calculator.prototype.addFunction = function(token, params, reduce, calculate) {
  */
 Calculator.prototype.addDefaultFunctions = function(lang, moment) {
 	var calculator = this;
+	var nullType = calculator.types.filter(function(t) { return t.name === 'null'; })[0];
 	var floatType = calculator.types.filter(function(t) { return t.name === 'float'; })[0];
 	var stringType = calculator.types.filter(function(t) { return t.name === 'string'; })[0];
 	var integerType = calculator.types.filter(function(t) { return t.name === 'integer'; })[0];

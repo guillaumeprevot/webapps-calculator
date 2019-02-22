@@ -218,6 +218,11 @@ Ce projet est distribué sous licence MIT, reproduite dans le fichier LICENSE ic
 - correction de la calculatrice qui lançait une erreur si on demandait le calcul d'une formule vide
 - mise à jour du CHANGELOG dans README.md
 
+2019-02-22
+- correction de "addDefaultFunctions" qui utilisait une variable "nullType" non définie
+- documentation de méthodes oubliées dans CalculatorFunction, CalculatorOperation et CalculatorTree
+- mise à jour de LICENCE pour 2019
+
 ## TODO
 
 - gérer le cache de "https://techgp.fr:11215/moneyrates" par le Service Worker (1 fetch par jour)
