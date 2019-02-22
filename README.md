@@ -3,7 +3,7 @@
 A calculator application with usual mathematical features, extendable function support and unit conversion.
 
 ```Example
-If((1+Pi == acos(-1) -2 + (1.5+1.5)) == true, "OK", "KO")
+mem = "" + si(non & vide, heure("22:21:20") + 0x14, 6² + √0b100100)
 ```
 
 ## Présentation
@@ -219,8 +219,9 @@ Ce projet est distribué sous licence MIT, reproduite dans le fichier LICENSE ic
 - mise à jour du CHANGELOG dans README.md
 
 2019-02-22
+- création de CalculatorContext pour formaliser cette notion nécessaire pour implementer correctement CalculatorLiteral, CalculatorFunction et CalculatorOperator
 - correction de "addDefaultFunctions" qui utilisait une variable "nullType" non définie
-- documentation de méthodes oubliées dans CalculatorFunction, CalculatorOperation et CalculatorTree
+- documentation de méthodes oubliées dans CalculatorFunction, CalculatorOperator et CalculatorTree
 - mise à jour de LICENCE pour 2019
 
 ## TODO

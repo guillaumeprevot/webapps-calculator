@@ -382,7 +382,8 @@ function getWithCache(prompt, cacheKey, cacheUrlKey, cacheExpire, resolve, rejec
 
 $(function() {
 	var input = document.getElementById('calculator-content'),
-		calculator = new Calculator();
+		calculator = new Calculator(),
+		context = new CalculatorContext(calculator);
 	calculator.addDefaultTypes(lang, moment.utc);
 	calculator.addDefaultLiterals(lang);
 	calculator.addDefaultFunctions(lang, moment.utc);
@@ -415,13 +416,13 @@ $(function() {
 			tree = calculator.parse(val);
 			//console.log(tree);
 			//console.log(calculator.format(tree));
-			calculator.reduce(tree, function(output) {
+			context.reduce(tree, function(output) {
 				//console.log(output);
 				//console.log(calculator.format(output));
 				if (typeof output === 'undefined')
 					input.value = '';
 				else if (output.isValue())
-					input.value = output.getType().format(output.getValue(calculator));
+					input.value = output.getType().format(output.getValue(context));
 				else
 					input.value = calculator.format(output);
 				setMessage(val, false);

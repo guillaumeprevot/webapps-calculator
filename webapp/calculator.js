@@ -327,6 +327,90 @@ CalculatorTree.newPostfix = function(operator, left, token) { return new Calcula
 CalculatorTree.newFunction = function(func, params, token) { return new CalculatorTree({ kind: 'function', source: func, params: params, token: token }); };
 
 /**
+ * This class represents the context provided to literals (see "getValue"/"setValue") and to operators and functions (see "reduce" methods).
+ * 
+ * It provides at least two methods :
+ * - reduce(CalculatorTree, resolve, reject) => CalculatorTree to reduce an AST within this context
+ * - reduceAll(Array<CalculatorTree>, resolve, reject) => Array<CalculatorTree> to reduce multiple AST within this context
+ * 
+ * It can also hold context-specific values for literal, like variable's value.
+ * 
+ * @member {Calculator} calculator - the calculator this context is linked to
+ */
+function CalculatorContext(calculator) {
+	this.calculator = calculator;
+}
+
+/** This method will reduce the "tree" AST within this context and will resolve with the reduced AST or reject if an error occurred */
+CalculatorContext.prototype.reduce = function(tree, resolve, reject) {
+	if (typeof tree === 'undefined') {
+		resolve(undefined);
+		return;
+	}
+
+	switch (tree.kind) {
+		case 'constant': // 1, 123.45, true, null, ...
+			resolve(tree);
+			break;
+		case 'literal': // pi, mem, ...
+			if (tree.source.notResolved)
+				resolve(tree);
+			else
+				resolve(CalculatorTree.newConstant(tree.source.type, tree.source.getValue(this), undefined));
+			break;
+		case 'array': // [ params ]
+			this.reduceAll(tree.params, function(results) {
+				resolve(CalculatorTree.newArray(results));
+			}, reject);
+			break;
+		case 'grouping': // ( ... )
+			this.reduce(tree.left, function(resultLeft) {
+				if (resultLeft.kind === 'constant')
+					resolve(resultLeft);
+				else
+					resolve(CalculatorTree.newGrouping(resultLeft));
+			}, reject);
+			break;
+		case 'binary': // left token right
+			tree.source.reduce(this, resolve, reject, tree.left, tree.right);
+			break;
+		case 'prefix': // token right
+			tree.source.reduce(this, resolve, reject, tree.right);
+			break;
+		case 'postfix': // left token
+			tree.source.reduce(this, resolve, reject, tree.left);
+			break;
+		case 'function': // token ( params )
+			tree.source.reduce.apply(tree.source, [this, resolve, reject].concat(tree.params));
+			break;
+		default:
+			reject(new Error('Invalid tree node kind ' + tree.kind, tree));
+	}
+};
+
+/** This method will reduce multiple "params" AST within this context and will resolve with an array of reduced AST or reject if an error occurred */
+CalculatorContext.prototype.reduceAll = function(params, resolve, reject) {
+	if (params.length === 0) {
+		resolve([]);
+		return;
+	}
+	var count = params.length;
+	var values = [];
+	values.length = count;
+	params.forEach(function(param, index) {
+		this.reduce(param, function(value) {
+			values[index] = value;
+			if (count === 1) // if this is the last one
+				resolve(values); // we're done
+			count--; // otherwise, decrement and continue "params" evaluation
+		}, function(error) {
+			count = 0; // setting "count" to 0 to ensure "resolve" is not called
+			reject(error);
+		});
+	}.bind(this));
+};
+
+/**
  * The calculator combines the grammar (~syntax) and the parser (parse/format/calculate)
  *
  * @member {Array} types - the supported types (integers, floats, integers in hexadecimal notation, string, dates, boolean, ...)
@@ -790,73 +874,6 @@ Calculator.prototype.format = function(tree) {
 			return (tree.token || tree.source.token) + '(' + tree.params.map(this.format.bind(this)).join(', ') + ')';
 	}
 	throw Error('Invalid tree node kind ' + tree.kind, tree);
-};
-
-Calculator.prototype.reduce = function(tree, resolve, reject) {
-	if (typeof tree === 'undefined') {
-		resolve(undefined);
-		return;
-	}
-
-	switch (tree.kind) {
-		case 'constant': // 1, 123.45, true, null, ...
-			resolve(tree);
-			break;
-		case 'literal': // pi, mem, ...
-			if (tree.source.notResolved)
-				resolve(tree);
-			else
-				resolve(CalculatorTree.newConstant(tree.source.type, tree.source.getValue(this), undefined));
-			break;
-		case 'array': // [ params ]
-			this.reduceAll(tree.params, function(results) {
-				resolve(CalculatorTree.newArray(results));
-			}, reject);
-			break;
-		case 'grouping': // ( ... )
-			this.reduce(tree.left, function(resultLeft) {
-				if (resultLeft.kind === 'constant')
-					resolve(resultLeft);
-				else
-					resolve(CalculatorTree.newGrouping(resultLeft));
-			}, reject);
-			break;
-		case 'binary': // left token right
-			tree.source.reduce(this, resolve, reject, tree.left, tree.right);
-			break;
-		case 'prefix': // token right
-			tree.source.reduce(this, resolve, reject, tree.right);
-			break;
-		case 'postfix': // left token
-			tree.source.reduce(this, resolve, reject, tree.left);
-			break;
-		case 'function': // token ( params )
-			tree.source.reduce.apply(tree.source, [this, resolve, reject].concat(tree.params));
-			break;
-		default:
-			reject(new Error('Invalid tree node kind ' + tree.kind, tree));
-	}
-};
-
-Calculator.prototype.reduceAll = function(params, resolve, reject) {
-	if (params.length === 0) {
-		resolve([]);
-		return;
-	}
-	var count = params.length;
-	var values = [];
-	values.length = count;
-	params.forEach(function(param, index) {
-		this.reduce(param, function(value) {
-			values[index] = value;
-			if (count === 1) // if this is the last one
-				resolve(values); // we're done
-			count--; // otherwise, decrement and continue "params" evaluation
-		}, function(error) {
-			count = 0; // setting "count" to 0 to ensure "resolve" is not called
-			reject(error);
-		});
-	}.bind(this));
 };
 
 /** stops the parsing process and reports an error. */
