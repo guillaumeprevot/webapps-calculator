@@ -227,6 +227,7 @@ Ce projet est distribué sous licence MIT, reproduite dans le fichier LICENSE ic
 2019-05-01
 - correction du traitement des opérateurs 'postfix' car 2² fonctionnait mais pas (1+1)²
 - encapsulation du code du calculateur dans "loadCalculatorAPI", permettant l'activation de "use strict" et le choix des méthodes exportées
+- correction de l'URL et simplification du code de récupération des taux de change vers l'euro
 
 ## TODO
 

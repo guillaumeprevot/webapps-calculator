@@ -313,7 +313,7 @@ Converter.prototype.addMoneyCategory = function(resolve, reject) {
 	// - Taux : http://www.ecb.europa.eu/stats/eurofxref/eurofxref-daily.xml
 	// - Noms : http://www.ecb.europa.eu/stats/exchange/eurofxref/html/index.en.html
 	var self = this;
-	getWithCache('URL', 'utils-money-rates', 'utils-money-rates-url', 1000 * 60 * 60 * 24, function(moneyRates) {
+	getMoneyRates().then(function(moneyRates) {
 		self.startCategory('Money');
 		self.addUnit('euro', 1, '€');
 		for (var currency in moneyRates) {
@@ -336,47 +336,34 @@ Converter.prototype.apply = function(value, conversion, invert) {
 	return value * multiplier / divider + offset;
 };
 
-function getWithCache(prompt, cacheKey, cacheUrlKey, cacheExpire, resolve, reject) {
-	// Vérifier le support de localStorage
-	if (typeof localStorage === 'undefined') {
-		resolve(null);
-		return;
-	}
+function getMoneyRates() {
+	var url = 'https://techgp.fr:11215/moneyrates';
+	var expire = 1000 * 60 * 60 * 24;
+	var key = 'utils-money-rates';
+	// Sans "localStorage", on n'intègre pas la fonction pour ne pas solliciter "techgp.fr" à chaque conversion
+	if (typeof localStorage === 'undefined')
+		return $.Deferred().resolve({});
 	// Récupérer dans localStorage les données, si présentes
-	var cache = localStorage.getItem(cacheKey);
+	var cache = localStorage.getItem(key);
 	if (cache) {
 		// value est de la forme { time: ms, data: data, url: url }
 		cache = JSON.parse(cache);
 		// Si le cache n'est pas trop vieux, on l'utilise
-		if (cache.time && (new Date().getTime() - cache.time) < cacheExpire) {
-			resolve(cache.data);
-			return;
+		if (cache.time && (Date.now() - cache.time) < expire) {
+			return $.Deferred().resolve(cache.data);
 		}
 	}
-	// Récupérer dans localStorage l'URL où chercher les données à jour, si présentes
-	var cacheUrl = localStorage.getItem(cacheUrlKey);
-	if (!cacheUrl) {
-		// Première fois, demander à l'utilisateur
-		cacheUrl = window.prompt(prompt, '') || 'disabled';
-		// Sauvegarder l'URL qu'il a donné ou sauvegarder 'disabled' pour ne pas redemander à chaque fois
-		localStorage.setItem(cacheUrlKey, cacheUrl);
-	}
-	// Si l'utilisateur n'a pas fourni d'URL, on le redemande pas à chaque fois
-	if (cacheUrl === 'disabled') {
-		resolve(null);
-		return;
-	}
 	// Mettre à jour le cache s'il est vide ou obsolète
-	$.get(cacheUrl).done(function(data) {
-		// console.log(data)
-		resolve(data);
+	return $.get(url).then(function(data) {
+		// console.log(data);
 		// On met à jour le cache
-		localStorage.setItem(cacheKey, JSON.stringify({
-			time: new Date().getTime(),
+		localStorage.setItem(key, JSON.stringify({
+			time: Date.now(),
 			data: data
 		}));
 	}).fail(function(error) {
-		reject(error);
+		// console.log(error);
+		return {};
 	});
 }
 
@@ -396,7 +383,7 @@ $(function() {
 		converter.addMoneyCategory(function() {
 			var value = converter.convert(n.getValue(context), u1.getValue(context), u2.getValue(context));
 			var floatType = calculator.types.filter(function(t) { return t.name === 'float'; })[0];
-			resolve(CalculatorTree.newConstant(floatType, value, undefined));
+			resolve(api.CalculatorTree.newConstant(floatType, value, undefined));
 		}, reject);
 	});
 
