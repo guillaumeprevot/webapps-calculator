@@ -224,6 +224,10 @@ Ce projet est distribué sous licence MIT, reproduite dans le fichier LICENSE ic
 - documentation de méthodes oubliées dans CalculatorFunction, CalculatorOperator et CalculatorTree
 - mise à jour de LICENCE pour 2019
 
+2019-05-01
+- correction du traitement des opérateurs 'postfix' car 2² fonctionnait mais pas (1+1)²
+- encapsulation du code du calculateur dans "loadCalculatorAPI", permettant l'activation de "use strict" et le choix des méthodes exportées
+
 ## TODO
 
 - gérer le cache de "https://techgp.fr:11215/moneyrates" par le Service Worker (1 fetch par jour)

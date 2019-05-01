@@ -382,8 +382,10 @@ function getWithCache(prompt, cacheKey, cacheUrlKey, cacheExpire, resolve, rejec
 
 $(function() {
 	var input = document.getElementById('calculator-content'),
-		calculator = new Calculator(),
-		context = new CalculatorContext(calculator);
+		api = loadCalculatorAPI(),
+		calculator = new api.Calculator(),
+		context = new api.CalculatorContext(calculator);
+
 	calculator.addDefaultTypes(lang, moment.utc);
 	calculator.addDefaultLiterals(lang);
 	calculator.addDefaultFunctions(lang, moment.utc);
