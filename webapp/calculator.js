@@ -982,17 +982,27 @@ Calculator.prototype.Exp = function(p) {
 	// Get the next token
 	var token = this.next().toLowerCase();
 	// Check if the next token is a binary operator with expected minimum precedence
+	var op, q, right;
 	while (this.binaryOperators.hasOwnProperty(token) && this.binaryOperators[token].precedence >= p) {
-		var op = this.binaryOperators[token];
+		op = this.binaryOperators[token];
 		this.consume(token);
 		// "q" is the accepted precedence for an operator on the right side of the binary operator "token"
 		// This is where the precedence of operator matters !
-		var q = op.associativity === 'left' ? op.precedence + 1 : op.precedence;
+		q = op.associativity === 'left' ? op.precedence + 1 : op.precedence;
 		// Get the right part of the binary operator "token"
-		var right = this.Exp(q);
+		right = this.Exp(q);
 		// Create a "binary" AST node
 		tree = CalculatorTree.newBinary(op, tree /*a primary in the first loop, a binary after that*/, right, token);
 		// And check if the next token is also a binary operator
+		token = this.next().toLowerCase();
+	}
+	// Check if the next token is a postfix operator
+	while (this.postfixOperators.hasOwnProperty(token)) {
+		op = this.postfixOperators[token];
+		this.consume(token);
+		// Create a "postfix" AST node
+		tree = CalculatorTree.newPostfix(op, tree, token);
+		// And check if the next token is also a postfix operator
 		token = this.next().toLowerCase();
 	}
 	return tree;
@@ -1029,16 +1039,9 @@ Calculator.prototype.Primary = function() {
 		this.expect('(');
 		return CalculatorTree.newFunction(f, this.Array(')'), token);
 	}
-	// Finally, the token should be a literal : consume it and check if it is followed by one or more postfix operators
+	// Finally, the token should be a literal : consume it
 	var left = this.Literal(token);
 	this.consume(token);
-	token = this.next().toLowerCase();
-	while (this.postfixOperators.hasOwnProperty(token)) {
-		op = this.postfixOperators[token];
-		this.consume(token);
-		left = CalculatorTree.newPostfix(op, left, token);
-		token = this.next().toLowerCase();
-	}
 	return left;
 };
 
