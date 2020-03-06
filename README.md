@@ -229,12 +229,5 @@ Ce projet est distribué sous licence MIT, reproduite dans le fichier LICENSE ic
 - encapsulation du code du calculateur dans "loadCalculatorAPI", permettant l'activation de "use strict" et le choix des méthodes exportées
 - correction de l'URL et simplification du code de récupération des taux de change vers l'euro
 
-## TODO
-
-- gérer le cache de "https://techgp.fr:11215/moneyrates" par le Service Worker (1 fetch par jour)
-- casser la récursivité
-- support de la notation 2.1e3 pour 2 * 10^3
-- vérification des paramètres pour les fonctions et les opérateurs (y compris si un litéral est modifiable)
-- ajout de +ror, +rol (operator décalage de bit avec rotation), présents dans la calculette windows
-- saisie des angles en radian/degré/grade
-- recherche ?
+2020-03-06
+- mise à jour des modules Node pour "jshint"
