@@ -13,7 +13,7 @@ button[disabled] { cursor: not-allowed; }
 #calculator-keyboard > *:focus, #calculator-keyboard > *:hover { color: #ddd; background-color: #666; }
 #calculator-keyboard > button.execute { flex: 0 0 40%; }
 #calculator-help { display: none; float: right; flex-direction: row; flex-wrap: wrap; width: 50%; height: calc(100% - 96px - 23px); background-color: #888; }
-#calculator-help > * { flex: 0 0 16.66%; font-size: 20pt; color: #fff; background-color: transparent; border-width: 0; }
+#calculator-help > * { flex: 0 0 calc(100% / 6); font-size: 20pt; color: #fff; background-color: transparent; border-width: 0; }
 #calculator-help > *:focus, #calculator-help > *:hover { color: #ddd; background-color: #666; }
 
 body.success > #calculator-message { display: block; color: green; cursor: pointer; }

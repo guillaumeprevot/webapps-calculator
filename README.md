@@ -8,20 +8,19 @@ mem = "" + si(non & vide, heure("22:21:20") + 0x14, 6² + √0b100100)
 
 ## Présentation
 
-[Cette application](https://techgp.fr/webapps/webapps-calculator.html) écrite en HTML5, JavaScript et CSS3 vous donnera accès à une calculatrice directement dans votre navigateur.
+Cette application écrite en HTML5, JavaScript et CSS3 vous donnera accès à une calculatrice directement dans votre navigateur.
 
 Les liens suivants ont été utiles pour cette application :
 
 - [Parsing Expressions by Recursive Descent](https://www.engr.mun.ca/~theo/Misc/exp_parsing.htm), un formidable article qui propose une méthode simple à implémenter pour créer un parseur... et qui a mené à l'écriture du parseur utilisé ici.
 - [jsep](https://github.com/soney/jsep), pour JavaScript Expression Parser, sous licence MIT, qui été utilisé jusqu'au 22/05/2016 pour l'analyse des formules. L'API comme le code sont simples à comprendre.
-- [jQuery 3.3.1](https://jquery.com/) sous licence MIT
-- [moment.js 2.22.2](https://momentjs.com/) sous licence MIT
+- [jQuery 3.5.0](https://jquery.com/) sous licence MIT
+- [moment.js 2.24.0](https://momentjs.com/) sous licence MIT
 - [ECB](https://www.ecb.europa.eu/stats/policy_and_exchange_rates/euro_reference_exchange_rates/html/index.en.html) qui utilisé dans le convertisseur monétaire pour obtenir des taux de change quotidien
 - [DryIcons](https://dryicons.com/) pour le favicon
 
-L'application devrait fonctionner correctement en mode déconnecté grâce aux **Service Workers** intégrés aux navigateurs modernes : d'abord Chrome+Opera+Firefox puis récemment Safari+Edge ([détail ici](https://caniuse.com/#search=service+worker) ).
-
-Plus d'infos sur les Services Workers chez [Google](https://developers.google.com/web/fundamentals/primers/service-workers/) ou [Mozilla](https://developer.mozilla.org/en-US/docs/Web/API/Service_Worker_API/Using_Service_Workers).
+L'application devrait fonctionner correctement est mode déconnecté grâce aux **Service Workers** sous Chrome, Firefox et [d'autres](https://caniuse.com/#search=service+worker).
+Plus d'infos chez [Google](https://developers.google.com/web/fundamentals/primers/service-workers/) ou [Mozilla](https://developer.mozilla.org/en-US/docs/Web/API/Service_Worker_API/Using_Service_Workers).
 
 ## Captures d'écran
 
@@ -231,3 +230,10 @@ Ce projet est distribué sous licence MIT, reproduite dans le fichier LICENSE ic
 
 2020-03-06
 - mise à jour des modules Node pour "jshint"
+
+2020-04-15
+- mise à jour de jQuery (3.5.0) et Moment (2.24.0)
+- ajout de l'opérateur javascript "??"
+- correction de la précédence de l'opérateur "**"
+- correction du type décimal pour autoriser .2 par exemple pour signifier 0.2
+- intégration dans l'IHM des éléments de syntaxes manquants (++, --, =, année, mois, jour, heure, minute, seconde)

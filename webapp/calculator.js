@@ -39,7 +39,7 @@ function loadCalculatorAPI() {
 	 *
 	 * Example for a global "mem" variable :
 	 * new CalculatorLiteral('mem', integerType, 0, true);
-	 * 
+	 *
 	 * Example for a context-local "mem" variable :
 	 * new CalculatorLiteral('mem', integerType,
 	 *    function(context) { return (typeof context.mem === 'undefined') ? 0 : context.mem; },
@@ -331,13 +331,13 @@ function loadCalculatorAPI() {
 
 	/**
 	 * This class represents the context provided to literals (see "getValue"/"setValue") and to operators and functions (see "reduce" methods).
-	 * 
+	 *
 	 * It provides at least two methods :
 	 * - reduce(CalculatorTree, resolve, reject) => CalculatorTree to reduce an AST within this context
 	 * - reduceAll(Array<CalculatorTree>, resolve, reject) => Array<CalculatorTree> to reduce multiple AST within this context
-	 * 
+	 *
 	 * It can also hold context-specific values for literal, like variable's value.
-	 * 
+	 *
 	 * @member {Calculator} calculator - the calculator this context is linked to
 	 */
 	function CalculatorContext(calculator) {
@@ -416,7 +416,7 @@ function loadCalculatorAPI() {
 
 	/**
 	 * This class is a "Recursive Descent" parser implementation, based on a Theodore Norvell's article (https://www.engr.mun.ca/~theo/Misc/exp_parsing.htm).
-	 * 
+	 *
 	 * @member {Array} types - see Calculator
 	 * @member {Map} literals - see Calculator
 	 * @member {Map} functions - see Calculator
@@ -424,7 +424,7 @@ function loadCalculatorAPI() {
 	 * @member {Map} postfixOperators - see Calculator
 	 * @member {Map} binaryOperators - see Calculator
 	 * @member {Array} separators - a compact list of token separators, build from grammar to optimize parsing
-	 * 
+	 *
 	 * @param {Calculator} calculator - the calculator to get grammar
 	 * @param {String} formula - the formula to parse
 	 */
@@ -855,7 +855,7 @@ function loadCalculatorAPI() {
 		addRegExp('binary', /^0b[0-1]+$/,
 				function(token) { return parseInt(token.substring(2), 2); },
 				function(value) { return (value < 0 ? '-0b' : '0b') + Math.abs(value).toString(2); });
-		addRegExp('float', /^\d+\.\d+$/,
+		addRegExp('float', /^\d*\.\d+$/,
 				function(token) { return parseFloat(token); },
 				function(value) { return value.toString(); });
 		addRegExp('integer', /^\d+$/,
@@ -891,7 +891,7 @@ function loadCalculatorAPI() {
 		var stringType = calculator.types.filter(function(t) { return t.name === 'string'; })[0];
 		var integerType = calculator.types.filter(function(t) { return t.name === 'integer'; })[0];
 		var firstType = function(params) { return params[0].getType(); };
-		var numericType = function(params) { return params.some(function(p) { return p.getType() === floatType; }) ? floatType : integerType; }; 
+		var numericType = function(params) { return params.some(function(p) { return p.getType() === floatType; }) ? floatType : integerType; };
 
 		function addFromMath(token, params, type) {
 			calculator.addFunction(lang(token), params || '', undefined, function(context, resolve, reject) {
@@ -1040,6 +1040,23 @@ function loadCalculatorAPI() {
 			}, reject);
 		}, undefined);
 		precedence++;
+		add('??', 'left', function(context, resolve, reject, a, b) {
+			// Nullish coalescing operator https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Nullish_coalescing_operator
+			var self = this;
+			context.reduce(a, function(a) {
+				if (a.isValue() && a.getValue(context) !== null)
+					resolve(a);
+				else
+					context.reduce(b, function(b) {
+						if (a.isValue())
+							resolve(b);
+						else
+							resolve(CalculatorTree.newBinary(self, a, b, undefined));
+					}, reject);
+			}, reject);
+		}, undefined);
+		// ...  ... ()
+		precedence++;
 		add('|', 'left', undefined, binary(binaryType, function(a, b) { return a | b; })); // bitwise OR
 		precedence++;
 		add('^', 'left', undefined, binary(binaryType, function(a, b) { return a ^ b; })); // bitwise XOR
@@ -1087,13 +1104,14 @@ function loadCalculatorAPI() {
 		add('+', 'left', undefined, function(context, resolve, reject, a, b) {
 			var value = a.getValue(context) + b.getValue(context); // number addition and string concatenation
 			resolve(CalculatorTree.newConstant(typeof value === 'string' ? stringType : floatType, value, undefined));
-		}); 
+		});
 		add('-', 'left', undefined, binary(floatType, function(a, b) { return a - b; }));
 		precedence++;
-		add('**', 'right', undefined, binary(floatType, function(a, b) { return Math.pow(a, b); }));
 		add('*', 'left', undefined, binary(floatType, function(a, b) { return a * b; })); // &#x00D7;
 		add('/', 'left', undefined, binary(floatType, function(a, b) { return a / b; })); // &#x00F7;
 		add('%', 'left', undefined, binary(floatType, function(a, b) { return a % b; }));
+		precedence++;
+		add('**', 'right', undefined, binary(floatType, function(a, b) { return Math.pow(a, b); }));
 		precedence++;
 		add('√', 'prefix', undefined, unary(floatType, function(a) { return Math.sqrt(a); }));
 		add('!', 'prefix', undefined, unary(booleanType, function(a) { return !a; })); // logical not
